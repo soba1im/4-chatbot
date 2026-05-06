@@ -472,15 +472,22 @@
             opacity: 0.8;
         }
 
+        .briefing-image {
+            width: 700px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
         .mission-file-image {
-            width: 650px;
-            height: 480px;
+            width: 420px;
+            height: auto;
             object-fit: contain;
             border-radius: 8px;
         }
 
         #mission-file-area {
-            transform: translateX(-120px);
+            transform: translateX(-180px) translateY(-50px);
         }
 
         .chat-record-image {
@@ -506,8 +513,12 @@
             justify-content: center;
             align-items: center;
             width: 100%;
-            transform: translateY(-20px) translateX(0px);
         }
+
+        #auth-panel {
+            transform: translateY(-30px);
+        }
+
 
         .auth-image {
             max-width: 750px;
@@ -698,7 +709,7 @@
         }
 
         .clue-note-title {
-            font-family: 'Orbit', sans-serif;
+            font-family: 'DungGeunMo', sans-serif;
             color: white;
             font-size: 1.0rem;
             letter-spacing: 0.08em;
@@ -758,7 +769,7 @@
         }
 
         .clue-toggle-header {
-            font-family: 'Orbit', sans-serif;
+            font-family: 'DungGeunMo', sans-serif;
             color: rgba(255, 255, 255, 0.90);
             cursor: pointer;
             padding: 16px 0;
@@ -780,7 +791,7 @@
         }
 
         .clue-qa-text {
-            font-family: 'Orbit', sans-serif;
+            font-family: 'DungGeunMo', sans-serif;
             color: rgba(200, 230, 255, 0.85);
             font-size: 0.90rem;
             line-height: 1.8;
@@ -803,7 +814,7 @@
             background: rgba(0, 0, 0, 0.45);
             border: 1px solid rgba(255, 255, 255, 0.35);
             color: rgba(255, 255, 255, 0.80);
-            font-family: 'Orbit', sans-serif;
+            font-family: 'DungGeunMo', sans-serif;
             font-size: 0.85rem;
             padding: 12px 24px;
             cursor: pointer;
@@ -886,7 +897,7 @@
                 </div>
 
                 <div id="briefing-area" class="briefing-wrapper" style="display: none;">
-                    <img src="{{ url_for('static', filename='images/hateslop/briefing.png') }}" class="mission-file-image" alt="상황 브리핑">
+                    <img src="{{ url_for('static', filename='images/hateslop/briefing.png') }}" class="briefing-image" alt="상황 브리핑">
                     <div class="briefing-arrow-area">
                         <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="briefing-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
                     </div>
@@ -1032,7 +1043,7 @@
             },
             {
                 id: 5,
-                text: "오, 아주 인간적인 문제가 발생했군요.\n본인의 역할조차 기억하지 못하는 상태입니다.",
+                text: "오, 아주 인간적인 문제가 발생했군요. 본인의 역할조차 기억하지 못하는 상태입니다.",
                 showArrow: true,
                 showPico: true,
                 showHologram: false,
@@ -1580,12 +1591,12 @@
 
         const sendBtn = document.getElementById('send-btn');
 
-        let currentSceneIndex = 15; // TEST: 역할 인증 장면부터 시작
+        let currentSceneIndex = 0;
         let currentBattery = 5;
         let typingInterval;
         let questionCount = 0;
         let jobQuestionCount = 0;
-        let currentPhase = "name";
+        let currentPhase = "job";
         let qaHistory = [];
         let missionFileUnlocked = false;
         let namePhaseUnlocked = false;
@@ -2062,6 +2073,7 @@
 
             const newScene = {
                 id: nextId,
+                isJobInputScene: wasInJobMode,
                 text: answerText,
                 showArrow: false,
                 autoAdvanceSec: (currentPhase === "name" && isQuestion && (questionCount === 3 || questionCount === 5)) ? 2 : undefined,
@@ -2237,7 +2249,8 @@
             const fromScene = scenes[fromIdx];
             const toScene = scenes[toIdx];
             const isPicoDialogue = (s) => s && s.showPico && !s.showRoleAuth && !s.showMissionFile && !s.showChatRecord && !s.isBriefing && !s.showAlbumHint;
-            if (isPicoDialogue(fromScene) && isPicoDialogue(toScene)) {
+            const bgSame = fromScene?.bgImage === toScene?.bgImage;
+            if (isPicoDialogue(fromScene) && isPicoDialogue(toScene) && bgSame) {
                 renderScene(toIdx);
                 return;
             }
@@ -2285,7 +2298,10 @@
                 document.body.style.backgroundImage = `url('/static/${scene.bgImage}')`;
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
-                if (scene.bgImage.includes('cockpit_bg')) namePhaseUnlocked = true;
+                if (scene.bgImage.includes('cockpit_bg')) {
+                    namePhaseUnlocked = true;
+                    currentPhase = "name";
+                }
             } else {
                 document.body.style.backgroundImage = '';
             }
@@ -2380,6 +2396,14 @@
                     roleAuthImg.src = `/static/${scene.roleAuthImage}`;
                 }
                 centerDisplayWrapper.className = 'normal-layout';
+                centerDisplayWrapper.style.paddingBottom = '';
+                if (scene.isJobInputScene) {
+                    centerDisplayWrapper.style.justifyContent = 'flex-start';
+                    centerDisplayWrapper.style.paddingTop = '30px';
+                } else {
+                    centerDisplayWrapper.style.justifyContent = '';
+                    centerDisplayWrapper.style.paddingTop = '';
+                }
                 standardChatArea.style.display = 'none';
                 briefingArea.style.display = 'none';
                 if (missionFileArea) missionFileArea.style.display = 'none';
@@ -2510,7 +2534,7 @@
                     // 모든 영상이 끝나면 영상 레이어 숨기고 게임 시작
                     videoOverlay.style.display = 'none';
                     mainGameUI.style.display = 'block';
-                    renderScene(16); // TEST: 역할 인증 장면부터 시작
+                    renderScene(0);
                 }
             };
         }
@@ -2644,31 +2668,55 @@
             const startBtn = document.getElementById('game-start-btn');
             if (startBtn) {
                 startBtn.addEventListener('click', () => {
-                    // TEST: name_authentication_success.png 장면 직접 테스트
-                    document.getElementById('start-screen').style.display = 'none';
-                    mainGameUI.style.display = 'block';
-                    const testScene = {
-                        id: 9999,
-                        text: "",
-                        showArrow: true,
-                        showPico: false,
-                        showHologram: false,
-                        isBriefing: false,
-                        showRecommendText: true,
-                        showMissionFile: false,
-                        showChatRecord: false,
-                        showRoleAuth: true,
-                        roleAuthImage: "images/hateslop/name_authentication_success.png",
-                        triggerEnding: true,
-                        sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png",
-                        inputBgImage: "images/hateslop/cockpit_input.png",
-                        powerBgImage: "images/hateslop/cockpit_left_electric.png",
-                        recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
-                        bgImage: "images/hateslop/cockpit_bg.jpg",
-                        recommendQuestions: []
-                    };
-                    scenes.push(testScene);
-                    renderScene(scenes.length - 1);
+                    // 게임 재시작 시 상태 초기화
+                    currentSceneIndex = 0;
+                    currentBattery = 5;
+                    questionCount = 0;
+                    jobQuestionCount = 0;
+                    currentPhase = "job";
+                    qaHistory = [];
+                    missionFileUnlocked = false;
+                    namePhaseUnlocked = false;
+                    jobFailCount = 0;
+                    nameFailCount = 0;
+                    isJobInputMode = false;
+                    isNameInputMode = false;
+                    clearAutoAdvance();
+                    scenes.length = 36;
+                    for (let i = 1; i <= 5; i++) {
+                        const bat = document.getElementById(`bat-${i}`);
+                        if (bat) bat.style.opacity = '1';
+                    }
+
+                    const startScreen = document.getElementById('start-screen');
+                    startScreen.style.transition = 'opacity 0.6s';
+                    startScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        startScreen.style.display = 'none';
+
+                        showIntroTyping("당신은 우주 한가운데에 있습니다.", 2000, () => {
+                        showIntroTyping("그러나 기억이 아무것도 나지 않습니다.\n이름도, 이곳에 온 이유도,\n함께 있던 사람들의 얼굴도 떠오르지 않습니다.", 2500, () => {
+                        showIntroTyping("다만 한 가지는 분명합니다.", 2000, () => {
+                        showIntroTyping("집으로 돌아가야 합니다.\n그 집조차 기억이 나지 않지만요.", 2500, () => {
+
+                            document.getElementById('intro-overlay').style.display = 'none';
+                            videoOverlay.style.display = 'block';
+                            endingVideo.src = '/static/videos/hateslop/opening.mp4';
+                            endingVideo.play();
+                            endingVideo.onended = () => {
+                                videoOverlay.style.display = 'none';
+
+                                showIntroTyping("PD 제작", 2000, () => {
+                                    document.getElementById('intro-overlay').style.display = 'none';
+                                    mainGameUI.style.display = 'block';
+                                    renderScene(0);
+                                });
+                            };
+                        });
+                        });
+                        });
+                        });
+                    }, 600);
                 });
             }
         });
