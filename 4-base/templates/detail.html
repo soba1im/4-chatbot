@@ -506,12 +506,15 @@
             justify-content: center;
             align-items: center;
             width: 100%;
-            transform: translateY(-95px) translateX(0px);
+            transform: translateY(-20px) translateX(0px);
         }
 
         .auth-image {
-            width: 750px;
+            max-width: 750px;
+            max-height: 68vh;
+            width: auto;
             height: auto;
+            object-fit: contain;
         }
 
         @keyframes fadeOut {
@@ -871,7 +874,12 @@
 
             <div id="center-display-wrapper" class="normal-layout">
                 <img src="{{ url_for('static', filename='images/hateslop/pico.png') }}" alt="피코" class="character-pico pico-normal" id="pico-avatar">
-                
+
+                <div id="album-hint-area" style="display: none; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 900px; padding: 0 50px; box-sizing: border-box; margin-bottom: 8px;">
+                    <img src="{{ url_for('static', filename='images/hateslop/album_hint.png') }}" style="max-width: 260px; height: auto;">
+                    <img src="{{ url_for('static', filename='images/hateslop/album_info.png') }}" style="width: 100%; height: auto;">
+                </div>
+
                 <div id="standard-chat-area" class="chat-text-container">
                     <div id="chat-history" class="chat-history-text"></div>
                     <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="next-arrow-btn" class="next-arrow" alt="다음 대사">
@@ -908,6 +916,7 @@
                         <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="role-auth-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -1164,6 +1173,7 @@
                 showChatRecord: false,
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/role_authentication_success_display.png",
+                playVideoBeforeNext: "hateslop/role_authentication_success.mp4",
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
             },
@@ -1264,7 +1274,8 @@
                 showRecommendText: true,
                 showMissionFile: false,
                 showChatRecord: false,
-                showRoleAuth: false, // 인증 창 끄기
+                showRoleAuth: false,
+                triggerFailEnding: true,
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
             },
@@ -1280,6 +1291,7 @@
                 showChatRecord: false,
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/role_authentication_success_display.png",
+                playVideoBeforeNext: "hateslop/role_authentication_success.mp4",
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
             },
@@ -1317,9 +1329,10 @@
                 showRecommendText: true,
                 showMissionFile: false,
                 showChatRecord: false,
-                showRoleAuth: true, // 2차 인증 디스플레이 활성화
-                roleAuthImage: "images/hateslop/name_input_display.png", 
+                showRoleAuth: true,
+                roleAuthImage: "images/hateslop/name_input_display.png",
                 isNameInputScene: true,
+                autoAdvanceSec: 5,
                 sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png", 
                 powerBgImage: "images/hateslop/cockpit_left_electric.png", 
                 recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
@@ -1361,7 +1374,7 @@
             },
             {
                 id: 28,
-                text: "미리 말 못 해서 죄송하긴 하네요… 보안 때문에 어쩔 수 없었답니다.\n제 잘못은 아니죠! 그래도 저와 함께라면 이름을 알아낸 것처럼 역할도 알아낼 수 있을 거예요!",
+                text: "미리 말 못 해서 죄송하긴 하네요… 보안 때문에 어쩔 수 없었답니다. 제 잘못은 아니죠! 그래도 저와 함께라면 이름을 알아낸 것처럼 역할도 알아낼 수 있을 거예요!",
                 showArrow: true,
                 showPico: true,
                 showHologram: false,
@@ -1542,7 +1555,7 @@
             {
                 id: 35,
                 text: "질문질문",
-                showArrow: true,
+                showArrow: false,
                 showPico: true,
                 showHologram: false,
                 isBriefing: false,
@@ -1567,7 +1580,7 @@
 
         const sendBtn = document.getElementById('send-btn');
 
-        let currentSceneIndex = 1;
+        let currentSceneIndex = 15; // TEST: 역할 인증 장면부터 시작
         let currentBattery = 5;
         let typingInterval;
         let questionCount = 0;
@@ -1602,6 +1615,7 @@
         const roleAuthArea = document.getElementById('role-auth-area');
         const roleAuthImg = document.getElementById('role-auth-img');
         const roleAuthNextBtn = document.getElementById('role-auth-next-btn');
+        const albumHintArea = document.getElementById('album-hint-area');
         const chatRecordImg = document.getElementById('chat-record-img');
         const videoOverlay = document.getElementById('video-overlay');
         const endingVideo = document.getElementById('ending-video');
@@ -1636,25 +1650,53 @@
             clearAutoAdvance();
             const currentScene = scenes[currentSceneIndex];
 
+            if (currentScene.playVideoBeforeNext) {
+                videoOverlay.style.display = 'block';
+                endingVideo.src = `/static/videos/${currentScene.playVideoBeforeNext}`;
+                endingVideo.play();
+                endingVideo.onended = () => {
+                    videoOverlay.style.display = 'none';
+                    currentSceneIndex++;
+                    renderScene(currentSceneIndex);
+                };
+                return;
+            }
+
             if (currentScene.triggerEnding) {
-                playSuccessVideo("success_video.mp4", null);
+                videoOverlay.style.display = 'block';
+                endingVideo.src = '/static/videos/hateslop/happyending.mp4';
+                endingVideo.play();
+                endingVideo.onended = () => {
+                    videoOverlay.addEventListener('click', () => {
+                        videoOverlay.style.display = 'none';
+                        mainGameUI.style.display = 'none';
+                        document.getElementById('start-screen').style.display = 'flex';
+                    }, { once: true });
+                };
                 return;
             }
 
             if (currentScene.triggerFailEnding) {
-                playEndingVideo("ending_fail.mp4", null); 
+                videoOverlay.style.display = 'block';
+                endingVideo.src = '/static/videos/hateslop/badending.mp4';
+                endingVideo.play();
+                endingVideo.onended = () => {
+                    videoOverlay.addEventListener('click', () => {
+                        videoOverlay.style.display = 'none';
+                        mainGameUI.style.display = 'none';
+                        document.getElementById('start-screen').style.display = 'flex';
+                    }, { once: true });
+                };
                 return;
             }
 
             if (currentScene.returnSceneIndex !== undefined && currentSceneIndex >= scenes.length - 1) {
-                currentSceneIndex = currentScene.returnSceneIndex;
-                renderScene(currentSceneIndex);
+                dissolveToScene(currentSceneIndex, currentScene.returnSceneIndex);
                 return;
             }
 
             if (currentSceneIndex < scenes.length - 1) {
-                currentSceneIndex++;
-                renderScene(currentSceneIndex);
+                dissolveToScene(currentSceneIndex, currentSceneIndex + 1);
             }
         };
 
@@ -1743,9 +1785,9 @@
                         "최근 SNS 포스트를 보여줘"
                     ]
                 };
+                const fromIdx0 = currentSceneIndex;
                 scenes.push(chatRecordScene);
-                currentSceneIndex = scenes.length - 1;
-                renderScene(currentSceneIndex);
+                dissolveToScene(fromIdx0, scenes.length - 1);
                 return;
             }
 
@@ -1766,21 +1808,17 @@
                     return;
                 }
                 isJobInputMode = false;
+                const fromIdx1 = currentSceneIndex;
                 if (isJobCorrect) {
-                    currentSceneIndex = scenes.findIndex(scene => scene.id === 24);
-                    renderScene(currentSceneIndex);
+                    dissolveToScene(fromIdx1, scenes.findIndex(scene => scene.id === 24));
                 } else {
                     jobFailCount++;
-                    currentSceneIndex = scenes.findIndex(scene => scene.id === (jobFailCount === 1 ? 17 : 22));
-                    renderScene(currentSceneIndex);
+                    dissolveToScene(fromIdx1, scenes.findIndex(scene => scene.id === (jobFailCount === 1 ? 17 : 22)));
                 }
                 return;
             }
 
             if (isNameAttempt) {
-                if (questionCount < 5) {
-                    return;
-                }
                 isNameInputMode = false;
                 if (isNameCorrect) {
                     const successScene = {
@@ -1803,9 +1841,9 @@
                         recommendQuestions: [],
                         triggerEnding: true
                     };
+                    const fromIdx2 = currentSceneIndex;
                     scenes.push(successScene);
-                    currentSceneIndex = scenes.length - 1;
-                    renderScene(currentSceneIndex);
+                    dissolveToScene(fromIdx2, scenes.length - 1);
                 } else {
                     nameFailCount++; 
                     
@@ -1950,9 +1988,9 @@
                             recommendQuestions: []
                         };
 
+                        const fromIdx3 = currentSceneIndex;
                         scenes.push(failScene, failFollowUp1, failFollowUp2, failFollowUp3, failFollowUp4, failFollowUp5, failFollowUp6);
-                        currentSceneIndex = scenes.length - 7;
-                        renderScene(currentSceneIndex);
+                        dissolveToScene(fromIdx3, scenes.length - 7);
                     } else if (nameFailCount === 2) {
                         const finalFailScene = {
                             id: nextId,
@@ -1995,9 +2033,9 @@
                             triggerFailEnding: true 
                         };
 
+                        const fromIdx4 = currentSceneIndex;
                         scenes.push(finalFailScene, hibernationScene);
-                        currentSceneIndex = scenes.length - 2;
-                        renderScene(currentSceneIndex);
+                        dissolveToScene(fromIdx4, scenes.length - 2);
                     }
                 }
                 return; 
@@ -2026,7 +2064,7 @@
                 id: nextId,
                 text: answerText,
                 showArrow: false,
-                autoAdvanceSec: (currentPhase === "name" && isQuestion && (questionCount === 3 || questionCount === 5)) ? 4 : undefined,
+                autoAdvanceSec: (currentPhase === "name" && isQuestion && (questionCount === 3 || questionCount === 5)) ? 2 : undefined,
                 showPico: !isImageMode,
                 showHologram: false,
                 isBriefing: false,
@@ -2050,9 +2088,9 @@
                 ]
             };
 
+            const fromIdx5 = currentSceneIndex;
             scenes.push(newScene);
-            currentSceneIndex = scenes.length - 1;
-            renderScene(currentSceneIndex);
+            dissolveToScene(fromIdx5, scenes.length - 1);
 
             if (currentPhase === "name" && questionCount === 3 && isQuestion) {
                 const hintScene1 = {
@@ -2077,8 +2115,9 @@
                 const hintScene2 = {
                     id: nextId + 2,
                     text: "어때요? 조금 도움이 되죠! 이 흐름을 타서 빨리 다음 질문을 던져보세요!",
-                    showArrow: false,
-                    showPico: true,
+                    showArrow: true,
+                    showPico: false,
+                    showAlbumHint: true,
                     showHologram: false,
                     isBriefing: false,
                     showRecommendText: true,
@@ -2140,7 +2179,7 @@
 
                 const exhaustScene3 = {
                     id: lastId + 3,
-                    text: "자 이제 시동을 걸어볼 시간이에요.\n당신의 이름을 말할 준비는 되었겠죠?",
+                    text: "자 이제 시동을 걸어볼 시간이에요. 당신의 이름을 말할 준비는 되었겠죠?",
                     showArrow: true,
                     showPico: true,
                     showHologram: false,
@@ -2194,7 +2233,25 @@
             await handleUserInput(message);
         }
         
+        function dissolveToScene(fromIdx, toIdx) {
+            const fromScene = scenes[fromIdx];
+            const toScene = scenes[toIdx];
+            const isPicoDialogue = (s) => s && s.showPico && !s.showRoleAuth && !s.showMissionFile && !s.showChatRecord && !s.isBriefing && !s.showAlbumHint;
+            if (isPicoDialogue(fromScene) && isPicoDialogue(toScene)) {
+                renderScene(toIdx);
+                return;
+            }
+            const overlay = document.getElementById('fade-overlay');
+            overlay.style.transition = 'opacity 0.35s ease';
+            overlay.style.opacity = '1';
+            setTimeout(() => {
+                renderScene(toIdx);
+                setTimeout(() => { overlay.style.opacity = '0'; }, 50);
+            }, 380);
+        }
+
         function renderScene(index) {
+            currentSceneIndex = index;
             const scene = scenes[index];
             isJobInputMode = scene.isJobInputScene === true;
             isNameInputMode = scene.isNameInputScene === true;
@@ -2256,6 +2313,7 @@
             if (missionFileArea) missionFileArea.style.display = scene.showMissionFile ? 'flex' : 'none';
             if (chatRecordArea) chatRecordArea.style.display = scene.showChatRecord ? 'flex' : 'none';
             if (roleAuthArea) roleAuthArea.style.display = scene.showRoleAuth ? 'flex' : 'none';
+            if (albumHintArea) albumHintArea.style.display = 'none';
             
             if (recommendTextList) {
                 recommendTextList.style.display = scene.showRecommendText ? 'block' : 'none';
@@ -2303,7 +2361,20 @@
                 return; 
             } 
             
-            // 2. 역할 인증 화면 (15, 16, 17번 장면 등)
+            // 2. 앨범 힌트 화면 (album_hint.png + album_info.png)
+            else if (scene.showAlbumHint) {
+                centerDisplayWrapper.className = 'normal-layout';
+                centerDisplayWrapper.style.justifyContent = 'flex-end';
+                centerDisplayWrapper.style.paddingBottom = '15px';
+                picoAvatar.style.display = 'none';
+                albumHintArea.style.display = 'flex';
+                standardChatArea.style.display = 'flex';
+                briefingArea.style.display = 'none';
+                targetTextObj = chatHistoryObj;
+                targetArrowBtn = nextArrowBtn;
+            }
+
+            // 3. 역할 인증 화면 (15, 16, 17번 장면 등)
             else if (scene.showRoleAuth) {
                 if (roleAuthImg && scene.roleAuthImage) {
                     roleAuthImg.src = `/static/${scene.roleAuthImage}`;
@@ -2317,15 +2388,18 @@
                 if (scene.showPico) {
                     picoAvatar.className = 'character-pico pico-small';
                     picoAvatar.style.position = 'absolute';
-                    picoAvatar.style.left = '25%'; // 왼쪽 여백 (화면에 맞게 숫자 조절 가능)
-                    picoAvatar.style.top = '60%';  // 위쪽 여백 (숫자가 클수록 아래로 내려감)
-                    picoAvatar.style.transform = 'translateY(-50%)';
+                    picoAvatar.style.left = '25%';
+                    picoAvatar.style.top = '';
+                    picoAvatar.style.bottom = '20px';
+                    picoAvatar.style.transform = '';
+                    picoAvatar.style.width = '225px';
                 } else {
-                    // 피코를 숨겨야 할 때는 위치 설정 초기화
                     picoAvatar.style.position = '';
                     picoAvatar.style.left = '';
                     picoAvatar.style.top = '';
+                    picoAvatar.style.bottom = '';
                     picoAvatar.style.transform = '';
+                    picoAvatar.style.width = '';
                 }
 
                 if (scene.showArrow && roleAuthNextBtn) {
@@ -2333,8 +2407,11 @@
                 } else if (roleAuthNextBtn) {
                     roleAuthNextBtn.style.visibility = 'hidden';
                 }
+                if (scene.autoAdvanceSec) {
+                    autoAdvanceTimer = setTimeout(nextSceneLogic, scene.autoAdvanceSec * 1000);
+                }
                 return;
-            } 
+            }
 
             // 3. 미션 파일 화면
             else if (scene.showMissionFile) {
@@ -2360,7 +2437,15 @@
             // 5. 일반 대화 화면 (피코 중앙)
             else {
                 centerDisplayWrapper.className = 'normal-layout';
+                centerDisplayWrapper.style.justifyContent = '';
+                centerDisplayWrapper.style.paddingBottom = '';
                 picoAvatar.className = 'character-pico pico-normal';
+                picoAvatar.style.position = '';
+                picoAvatar.style.left = '';
+                picoAvatar.style.top = '';
+                picoAvatar.style.bottom = '';
+                picoAvatar.style.transform = '';
+                picoAvatar.style.width = '';
                 standardChatArea.style.display = 'flex';
                 briefingArea.style.display = 'none';
                 targetTextObj = chatHistoryObj;
@@ -2425,7 +2510,7 @@
                     // 모든 영상이 끝나면 영상 레이어 숨기고 게임 시작
                     videoOverlay.style.display = 'none';
                     mainGameUI.style.display = 'block';
-                    renderScene(0); // 0번 장면(프롤로그) 호출
+                    renderScene(16); // TEST: 역할 인증 장면부터 시작
                 }
             };
         }
@@ -2559,41 +2644,31 @@
             const startBtn = document.getElementById('game-start-btn');
             if (startBtn) {
                 startBtn.addEventListener('click', () => {
-                    const startScreen = document.getElementById('start-screen');
-                    startScreen.style.transition = 'opacity 0.6s';
-                    startScreen.style.opacity = '0';
-                    setTimeout(() => {
-                        startScreen.style.display = 'none';
-
-                        // 타이핑 1: 당신은 우주 한가운데에 있습니다.
-                        showIntroTyping("당신은 우주 한가운데에 있습니다.", 2000, () => {
-                        // 타이핑 2: 그러나 기억이...
-                        showIntroTyping("그러나 기억이 아무것도 나지 않습니다.\n이름도, 이곳에 온 이유도,\n함께 있던 사람들의 얼굴도 떠오르지 않습니다.", 2500, () => {
-                        // 타이핑 3: 다만 한 가지는 분명합니다.
-                        showIntroTyping("다만 한 가지는 분명합니다.", 2000, () => {
-                        // 타이핑 4: 집으로 돌아가야 합니다.
-                        showIntroTyping("집으로 돌아가야 합니다.\n그 집조차 기억이 나지 않지만요.", 2500, () => {
-
-                            // opening.mp4 재생 (intro-overlay 숨겨서 영상이 보이게)
-                            document.getElementById('intro-overlay').style.display = 'none';
-                            videoOverlay.style.display = 'block';
-                            endingVideo.src = '/static/videos/hateslop/opening.mp4';
-                            endingVideo.play();
-                            endingVideo.onended = () => {
-                                videoOverlay.style.display = 'none';
-
-                                // PD 제작 타이핑
-                                showIntroTyping("PD 제작", 2000, () => {
-                                    document.getElementById('intro-overlay').style.display = 'none';
-                                    mainGameUI.style.display = 'block';
-                                    renderScene(0);
-                                });
-                            };
-                        });
-                        });
-                        });
-                        });
-                    }, 600);
+                    // TEST: name_authentication_success.png 장면 직접 테스트
+                    document.getElementById('start-screen').style.display = 'none';
+                    mainGameUI.style.display = 'block';
+                    const testScene = {
+                        id: 9999,
+                        text: "",
+                        showArrow: true,
+                        showPico: false,
+                        showHologram: false,
+                        isBriefing: false,
+                        showRecommendText: true,
+                        showMissionFile: false,
+                        showChatRecord: false,
+                        showRoleAuth: true,
+                        roleAuthImage: "images/hateslop/name_authentication_success.png",
+                        triggerEnding: true,
+                        sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png",
+                        inputBgImage: "images/hateslop/cockpit_input.png",
+                        powerBgImage: "images/hateslop/cockpit_left_electric.png",
+                        recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
+                        bgImage: "images/hateslop/cockpit_bg.jpg",
+                        recommendQuestions: []
+                    };
+                    scenes.push(testScene);
+                    renderScene(scenes.length - 1);
                 });
             }
         });
