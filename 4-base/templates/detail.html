@@ -190,6 +190,9 @@
 
         .recommend-text-list li {
             cursor: pointer;
+            font-family: 'Orbit', sans-serif;
+            margin-bottom: 16px;
+            line-height: 1.6;
         }
         .recommend-text-list li:hover {
             color: #f7e9a0;
@@ -668,6 +671,147 @@
                 width: 32px; /* 전송 버튼 이미지도 모바일 비율에 맞게 살짝 축소 */
             }
         }
+        /* === 단서 노트 전체 화면 === */
+        #clue-note-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 500;
+            flex-direction: column;
+            padding: 30px 50px 50px;
+            box-sizing: border-box;
+            gap: 24px;
+        }
+
+        .clue-note-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .clue-note-logo {
+            height: 52px;
+            width: auto;
+        }
+
+        .clue-note-title {
+            font-family: 'Orbit', sans-serif;
+            color: white;
+            font-size: 1.0rem;
+            letter-spacing: 0.08em;
+            background: rgba(0, 0, 0, 0.50);
+            padding: 10px 30px;
+            border-radius: 30px;
+        }
+
+        .clue-note-body {
+            flex: 1;
+            display: flex;
+            gap: 50px;
+            align-items: flex-end;
+            overflow: hidden;
+        }
+
+        .clue-note-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-end;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        #clue-note-pico {
+            width: 290px;
+        }
+
+        #clue-note-panel {
+            flex: 1;
+            align-self: stretch;
+            background: rgba(30, 45, 70, 0.55);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 18px;
+            padding: 40px 48px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #clue-note-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        #clue-note-list::-webkit-scrollbar { width: 4px; }
+        #clue-note-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 2px;
+        }
+
+        .clue-toggle-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+        }
+
+        .clue-toggle-header {
+            font-family: 'Orbit', sans-serif;
+            color: rgba(255, 255, 255, 0.90);
+            cursor: pointer;
+            padding: 16px 0;
+            font-size: 1.05rem;
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .clue-toggle-header:hover { color: #4be1e6; }
+
+        .clue-toggle-body {
+            display: none;
+            padding: 8px 0 20px;
+        }
+
+        .clue-mission-img {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .clue-qa-text {
+            font-family: 'Orbit', sans-serif;
+            color: rgba(200, 230, 255, 0.85);
+            font-size: 0.90rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            margin: 0;
+        }
+
+        .clue-characters-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .clue-characters-row img {
+            flex: 1;
+            min-width: 0;
+            border-radius: 8px;
+        }
+
+        #clue-note-back-btn {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: rgba(255, 255, 255, 0.80);
+            font-family: 'Orbit', sans-serif;
+            font-size: 0.85rem;
+            padding: 12px 24px;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: all 0.2s;
+        }
+
+        #clue-note-back-btn:hover {
+            color: white;
+            border-color: white;
+        }
     </style>
 </head>
 <body>
@@ -785,7 +929,24 @@
             <source src="" type="video/mp4">
         </video>
     </div> <!-- 비디오 -->
-     
+
+    <!-- 단서 노트 전체 화면 -->
+    <div id="clue-note-overlay" style="display: none;">
+        <div class="clue-note-header">
+            <img src="{{ url_for('static', filename='images/hateslop/logo.png') }}" class="clue-note-logo" alt="Project Ariadne">
+            <div class="clue-note-title">⊙ 단서 노트</div>
+        </div>
+        <div class="clue-note-body">
+            <div class="clue-note-left">
+                <img src="{{ url_for('static', filename='images/hateslop/pico.png') }}" id="clue-note-pico" alt="피코">
+                <button id="clue-note-back-btn">다시 대화창으로 돌아가기</button>
+            </div>
+            <div id="clue-note-panel">
+                <div id="clue-note-list"></div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         const picoAvatar = document.getElementById('pico-avatar');
@@ -1413,6 +1574,9 @@
         let questionCount = 0;
         let jobQuestionCount = 0;
         let currentPhase = "name";
+        let qaHistory = [];
+        let missionFileUnlocked = false;
+        let namePhaseUnlocked = false;
         let jobFailCount = 0;
         let nameFailCount = 0;
         let isJobInputMode = false;
@@ -1845,6 +2009,7 @@
                 if (wasInJobMode) {
                     jobQuestionCount++;
                 }
+                qaHistory.push({ question: userMessage, answer: answerText });
             }
 
             let isImageMode = false;
@@ -2070,6 +2235,7 @@
                 document.body.style.backgroundImage = `url('/static/${scene.bgImage}')`;
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
+                if (scene.bgImage.includes('cockpit_bg')) namePhaseUnlocked = true;
             } else {
                 document.body.style.backgroundImage = '';
             }
@@ -2179,6 +2345,7 @@
 
             // 3. 미션 파일 화면
             else if (scene.showMissionFile) {
+                missionFileUnlocked = true;
                 centerDisplayWrapper.className = 'briefing-layout';
                 picoAvatar.className = 'character-pico pico-small';
                 standardChatArea.style.display = 'none';
@@ -2275,6 +2442,85 @@
         if (briefingNextBtn) briefingNextBtn.addEventListener('click', nextSceneLogic);
         if (missionNextBtn) missionNextBtn.addEventListener('click', nextSceneLogic);
         if (roleAuthNextBtn) roleAuthNextBtn.addEventListener('click', nextSceneLogic);
+
+        // ─── 단서 노트 ────────────────────────────────────────────
+        function createClueToggle(label, buildContent) {
+            const item = document.createElement('div');
+            item.className = 'clue-toggle-item';
+
+            const header = document.createElement('div');
+            header.className = 'clue-toggle-header';
+            header.textContent = '+ ' + label;
+
+            const body = document.createElement('div');
+            body.className = 'clue-toggle-body';
+            buildContent(body);
+
+            header.addEventListener('click', () => {
+                const isOpen = body.style.display !== 'none';
+                body.style.display = isOpen ? 'none' : 'block';
+                header.textContent = (isOpen ? '+ ' : '- ') + label;
+            });
+
+            item.appendChild(header);
+            item.appendChild(body);
+            return item;
+        }
+
+        function openClueNote() {
+            mainGameUI.style.display = 'none';
+
+            const list = document.getElementById('clue-note-list');
+            list.innerHTML = '';
+
+            // 프로젝트 파일 (미션 파일 장면 이후에만 표시)
+            if (missionFileUnlocked) {
+                list.appendChild(createClueToggle('프로젝트 파일', (body) => {
+                    const img = document.createElement('img');
+                    img.src = '/static/images/hateslop/mission_file.png';
+                    img.className = 'clue-mission-img';
+                    body.appendChild(img);
+                }));
+            }
+
+            // 역대 질문 & 피코 답변
+            qaHistory.forEach((item, i) => {
+                const shortQ = item.question.length > 20 ? item.question.slice(0, 20) + '…' : item.question;
+                list.appendChild(createClueToggle(`Q${i + 1}. ${shortQ}`, (body) => {
+                    const p = document.createElement('p');
+                    p.className = 'clue-qa-text';
+                    p.textContent = item.answer;
+                    body.appendChild(p);
+                }));
+            });
+
+            // 인물 정보 (이름 추론 단계 이후)
+            if (namePhaseUnlocked) {
+                list.appendChild(createClueToggle('인물 정보', (body) => {
+                    const row = document.createElement('div');
+                    row.className = 'clue-characters-row';
+                    ['seoyunjae.png', 'mateo.png', 'martaeng.png'].forEach(fname => {
+                        const img = document.createElement('img');
+                        img.src = `/static/images/hateslop/${fname}`;
+                        row.appendChild(img);
+                    });
+                    body.appendChild(row);
+                }));
+            }
+
+            document.getElementById('clue-note-overlay').style.display = 'flex';
+        }
+
+        function closeClueNote() {
+            document.getElementById('clue-note-overlay').style.display = 'none';
+            mainGameUI.style.display = 'block';
+        }
+
+        const btnClue = document.getElementById('btn-clue');
+        if (btnClue) btnClue.addEventListener('click', openClueNote);
+        const clueBackBtn = document.getElementById('clue-note-back-btn');
+        if (clueBackBtn) clueBackBtn.addEventListener('click', closeClueNote);
+        // ─────────────────────────────────────────────────────────
 
         if (sendBtn) sendBtn.addEventListener('click', onSendClick);
         if (userInputField) userInputField.addEventListener('keypress', (e) => {
