@@ -98,18 +98,18 @@
 
 # 🛠️ 기술 스택
 
-## ## 💻 Backend
+## 💻 Backend
 - **Flask 3.0**: RESTful API 및 Jinja2 템플릿 엔진
 - **OpenAI API**: gpt-4o-mini / text-embedding-3-large
 - **ChromaDB**: PersistentClient 기반 로컬 벡터 DB
 - **LangChain**: 대화 기록 요약 및 버퍼 메모리 관리
 
-## ## 🎨 Frontend
+## 🎨 Frontend
 - **Vanilla JavaScript**: ES6+ 기반 상태 관리 로직
 - **HTML5 / CSS3**: Glassmorphism UI, Keyframe 애니메이션
 - **Web APIs**: Fetch API, HTMLVideoElement
 
-## ## 🌐 Infrastructure & VCS
+## 🌐 Infrastructure & VCS
 - **Infrastructure**: Docker
 - **Version Control**: Git, GitHub
 
@@ -117,31 +117,31 @@
 
 # 💡 기술 선택 이유
 
-## ## 💾 ChromaDB를 선택한 이유
+## 💾 ChromaDB를 선택한 이유
 - 파이썬 환경과 완벽하게 통합되며 별도 서버 구축 없이 임베디드 모드로 사용 가능합니다.
 - 벡터 검색을 통해 사용자의 의도를 파악하고 가장 적절한 게임 단서를 제공하기에 최적입니다.
 
-## ## 🧠 RAG 패턴을 적용한 이유
+## 🧠 RAG 패턴을 적용한 이유
 - LLM이 알지 못하는 게임 고유의 시나리오 지식을 실시간으로 주입하여 '환각 현상'을 방지하기 위함입니다.
 
-## ## ⚡ Vanilla JS + 단일 HTML을 선택한 이유
+## ⚡ Vanilla JS + 단일 HTML을 선택한 이유
 - 외부 라이브러리 의존성을 줄이고, 브라우저의 기본 동작 원리와 상태 관리의 본질을 직접 구현하며 학습하기 위해 선택했습니다.
 
 ---
 
 # ⚠️ 개발 중 문제점 & ✅ 해결 방법
 
-## ## ⚠️ 문제 1: 씬 전환 시 인덱스 동기화 오류
+## ⚠️ 문제 1: 씬 전환 시 인덱스 동기화 오류
 - **현상**: 특정 장면으로 이동 후 다음 버튼 클릭 시 이전 인덱스로 되돌아가는 현상.
 - **원인**: `renderScene` 함수 내에서 전역 변수 `currentSceneIndex` 업데이트 누락.
 - **해결**: 함수 실행 시 인덱스 동기화 코드를 최상단에 배치하여 해결.
 
-## ## ⚠️ 문제 2: 에셋 하드코딩으로 인한 UI 꼬임
+## ⚠️ 문제 2: 에셋 하드코딩으로 인한 UI 꼬임
 - **현상**: 복도 씬에서 질문 시 배경이 조종실로 강제 전환되는 버그.
 - **원인**: 동적 씬 생성 로직에서 배경 이미지를 조종실로 고정해둠.
 - **해결**: 현재 페이즈(`currentPhase`)를 체크하여 배경을 조건부로 할당하도록 로직 수정.
 
-## ## ⚠️ 문제 3: 게임 재시작 시 상태 유지 문제
+## ⚠️ 문제 3: 게임 재시작 시 상태 유지 문제
 - **현상**: 새로고침 없이 재시작 시 이전 질문 횟수가 남아있는 문제.
 - **해결**: 게임 시작 함수 호출 시 모든 전역 변수와 배열 길이를 초기화하는 코드 추가.
 
@@ -167,7 +167,7 @@
 ---
 
 # 👥 Contributors
-- **임소현 (@soba1im)**: front-end
-- **이재경 (@rud472888-creator)**: back-end
-- **김하은**: producer
-- **이세정**: producer
+- **[임소현 (@soba1im)](https://github.com/soba1im)** — Front-end
+- **[이재경 (@rud472888-creator)](https://github.com/rud472888-creator)** — Back-end
+- **김하은** — Producer
+- **이세정** — Producer
