@@ -1303,6 +1303,7 @@
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/role_authentication_success_display.png",
                 playVideoBeforeNext: "hateslop/role_authentication_success.mp4",
+                chainVideo: "hateslop/intermission.mp4",
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
             },
@@ -1666,9 +1667,18 @@
                 endingVideo.src = `/static/videos/${currentScene.playVideoBeforeNext}`;
                 endingVideo.play();
                 endingVideo.onended = () => {
-                    videoOverlay.style.display = 'none';
-                    currentSceneIndex++;
-                    renderScene(currentSceneIndex);
+                    if (currentScene.chainVideo) {
+                        endingVideo.src = `/static/videos/${currentScene.chainVideo}`;
+                        endingVideo.play();
+                        endingVideo.onended = () => {
+                            videoOverlay.style.display = 'none';
+                            dissolveToScene(currentSceneIndex, currentSceneIndex + 1);
+                        };
+                    } else {
+                        videoOverlay.style.display = 'none';
+                        currentSceneIndex++;
+                        renderScene(currentSceneIndex);
+                    }
                 };
                 return;
             }
@@ -2705,12 +2715,9 @@
                             endingVideo.play();
                             endingVideo.onended = () => {
                                 videoOverlay.style.display = 'none';
-
-                                showIntroTyping("PD 제작", 2000, () => {
-                                    document.getElementById('intro-overlay').style.display = 'none';
-                                    mainGameUI.style.display = 'block';
-                                    renderScene(0);
-                                });
+                                document.getElementById('intro-overlay').style.display = 'none';
+                                mainGameUI.style.display = 'block';
+                                renderScene(0);
                             };
                         });
                         });
