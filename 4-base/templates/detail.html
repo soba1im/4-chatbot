@@ -385,7 +385,7 @@
             margin-bottom: 30px; /* 💡 입력창과의 거리를 벌려 전체적으로 더 위로 위치하게 함 */
             width: 100%;
             max-width: 900px;
-            height: 130px; /* 💡 이전 코드에서 누락되어 밑으로 가라앉았던 원래 높이 복구! */
+            max-height: 350px;
             padding-left: 50px;
         }
 
@@ -398,12 +398,17 @@
             line-height: 1.6;
             white-space: pre-wrap;
             width: 900px;
-            height: 130px;
+            max-height: 350px;
             overflow-y: auto;
         }
 
         .chat-history-text::-webkit-scrollbar {
-            width: 0px;
+            width: 4px;
+        }
+
+        .chat-history-text::-webkit-scrollbar-thumb {
+            background: rgba(75, 225, 230, 0.4);
+            border-radius: 2px;
         }
 
         .next-arrow {
@@ -972,21 +977,26 @@
         const picoAvatar = document.getElementById('pico-avatar');
     </script>
     <script>
-        const LAST_CHAT_RECORD_TEXT = `[사고 직전 마지막 대화 로그]
+        const LAST_CHAT_RECORD_TEXT = `[대화 기록 일부 복구]
 
-피코: EVA-1, EVA-2 통신 두절. 자동항법이 외부 B구역 접근 경로를 계산했습니다.
-사용자: 접근 보류. 먼저 B구역 선체 손상도 확인해.
-피코: 외부 B구역 패널 손상 감지. 미세 누출 가능성 있습니다. 자세 안정 장치와 산소 순환에도 부하가 걸리고 있습니다.
-사용자: 손상 구획부터 격리해. 산소 순환은 유지하고, 자세 안정 장치는 최소 출력으로 낮춰.
-피코: 샘플 보관함 압력도 불안정합니다. 격리 절차를 강화할까요?
-사용자: 격리는 유지. 보관함에 출력 더 쓰지 마. 최소 유지만 남겨.
-피코: 전체 복구를 시도합니까?
-사용자: 아니. 통신 수신, 산소 순환, 자세 안정만 우선. 손상 구획은 막고, 살아 있는 라인으로 우회해.
-피코: 표준 절차와 다릅니다.
-사용자: 표준 절차는 선체가 정상일 때 기준이야. 지금은 복구보다 유지가 먼저야.
-피코: 기능 축소 모드 전환?
-사용자: 수동 승인. 기록 남겨.
-[기록 손상]`;
+AI:
+자동항법에 오류가 발생하여 선체 일부에 이상이 발생하였습니다.
+샘플 반응은 정상입니다.
+
+사용자:
+자동 판단 결과 말고, 원본값 보여줘.
+
+AI:
+어떤 원본값을 말씀하시는건가요?
+
+사용자:
+세 개 다. 방향, 열, 반응.
+
+AI:
+항로값, 선체 온도, 샘플 반응값을 동시에 표시합니다.
+
+사용자:
+시간순으로 정리해서 도표로 보여줘.`;
 
         const scenes = [
             {
@@ -1233,15 +1243,16 @@
             },
             {
                 id: 20,
-                text: LAST_CHAT_RECORD_TEXT,
+                text: "",
                 showArrow: true,
-                showPico: false, 
+                showPico: false,
                 showHologram: false,
                 isBriefing: false,
                 showRecommendText: true,
                 showMissionFile: false,
                 showChatRecord: false,
-                instantText: true,
+                showRoleAuth: true,
+                roleAuthImage: "images/hateslop/last_chat_log.png",
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
             },
@@ -1717,6 +1728,8 @@
             }
 
             if (currentSceneIndex < scenes.length - 1) {
+                const cs = scenes[currentSceneIndex];
+                if (cs && (cs.isJobInputScene || cs.isNameInputScene)) return;
                 dissolveToScene(currentSceneIndex, currentSceneIndex + 1);
             }
         };
@@ -1793,20 +1806,32 @@
                     showChatRecord: false,
                     instantText: true,
                     returnSceneIndex: currentSceneIndex,
-                    sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png",
-                    inputBgImage: "images/hateslop/cockpit_input.png",
-                    powerBgImage: "images/hateslop/cockpit_left_electric.png",
-                    recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
-                    bgImage: "images/hateslop/cockpit_bg.jpg",
-                    recommendQuestions: [
+                    sidebarMainBgImage: currentPhase === "name" ? "images/hateslop/cockpit_box_bg.png" : undefined,
+                    inputBgImage: currentPhase === "name" ? "images/hateslop/cockpit_input.png" : scenes[currentSceneIndex].inputBgImage,
+                    powerBgImage: currentPhase === "name" ? "images/hateslop/cockpit_left_electric.png" : undefined,
+                    recommendBgImage: currentPhase === "name" ? "images/hateslop/cockpit_recommended_qs.png" : undefined,
+                    bgImage: currentPhase === "name" ? "images/hateslop/cockpit_bg.jpg" : scenes[currentSceneIndex].bgImage,
+                    recommendQuestions: currentPhase === "name" ? [
                         "내가 살던 집 사진을 보여줘",
                         "내 인간관계는 어땠지?",
                         "내 평소 습관을 알려줘",
                         "내 취미는 어땠지?",
                         "최근 SNS 포스트를 보여줘"
+                    ] : [
+                        "나는 너에게 뭘 자주 물었어?",
+                        "나와의 대화 기록을 보여줘.",
+                        "너는 나를 어떤 사용자로 기억해?",
+                        "내가 특히 잘한 건 뭐야?",
+                        "나는 주로 어떤 공간에 있었어?"
                     ]
                 };
                 const fromIdx0 = currentSceneIndex;
+                if (currentPhase === "job" && currentBattery === 0) {
+                    const scene15Idx = scenes.findIndex(s => s.id === 15);
+                    if (scene15Idx !== -1) {
+                        chatRecordScene.returnSceneIndex = scene15Idx;
+                    }
+                }
                 scenes.push(chatRecordScene);
                 dissolveToScene(fromIdx0, scenes.length - 1);
                 return;
@@ -1825,9 +1850,6 @@
             const nextId = scenes[scenes.length - 1].id + 1;
 
             if (isJobAttempt) {
-                if (jobQuestionCount < 5) {
-                    return;
-                }
                 isJobInputMode = false;
                 const fromIdx1 = currentSceneIndex;
                 if (isJobCorrect) {
@@ -2096,23 +2118,38 @@
                 showRoleAuth: isImageMode,
                 roleAuthImage: isImageMode ? imagePath : "",
                 returnSceneIndex: isImageMode ? currentSceneIndex : undefined,
-                sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png",
-                inputBgImage: "images/hateslop/cockpit_input.png",
-                powerBgImage: "images/hateslop/cockpit_left_electric.png",
-                recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
-                bgImage: "images/hateslop/cockpit_bg.jpg",
-                recommendQuestions: [
+                bgImage: currentPhase === "name" ? "images/hateslop/cockpit_bg.jpg" : scenes[currentSceneIndex].bgImage,
+                inputBgImage: currentPhase === "name" ? "images/hateslop/cockpit_input.png" : scenes[currentSceneIndex].inputBgImage,
+                sidebarMainBgImage: currentPhase === "name" ? "images/hateslop/cockpit_box_bg.png" : undefined,
+                powerBgImage: currentPhase === "name" ? "images/hateslop/cockpit_left_electric.png" : undefined,
+                recommendBgImage: currentPhase === "name" ? "images/hateslop/cockpit_recommended_qs.png" : undefined,
+                recommendQuestions: currentPhase === "name" ? [
                     "내가 살던 집 사진을 보여줘",
                     "내 인간관계는 어땠지?",
                     "내 평소 습관을 알려줘",
                     "내 취미는 어땠지?",
                     "최근 SNS 포스트를 보여줘"
+                ] : [
+                    "나는 너에게 뭘 자주 물었어?",
+                    "나와의 대화 기록을 보여줘.",
+                    "너는 나를 어떤 사용자로 기억해?",
+                    "내가 특히 잘한 건 뭐야?",
+                    "나는 주로 어떤 공간에 있었어?"
                 ]
             };
 
             const fromIdx5 = currentSceneIndex;
             scenes.push(newScene);
             dissolveToScene(fromIdx5, scenes.length - 1);
+
+            if (currentPhase === "job" && currentBattery === 0) {
+                const scene15Idx = scenes.findIndex(s => s.id === 15);
+                if (scene15Idx !== -1) {
+                    autoAdvanceTimer = setTimeout(() => {
+                        dissolveToScene(scenes.length - 1, scene15Idx);
+                    }, 2000);
+                }
+            }
 
             if (currentPhase === "name" && questionCount === 3 && isQuestion) {
                 const hintScene1 = {
