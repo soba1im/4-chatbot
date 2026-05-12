@@ -192,6 +192,134 @@ class ChatbotService:
         correct_job = player_profile.get("secret_job", "") if player_profile else ""
         return self._matches_answer(user_message, [correct_job])
 
+    def _question_phase(self, phase: str) -> str:
+        """일반 질문이 직업 추론 단계인지 이름 추론 단계인지 반환"""
+        if phase == "name_question":
+            return "name"
+        return "job"
+
+    def _has_any(self, text: str, keywords: list[str]) -> bool:
+        return any(keyword in text for keyword in keywords)
+
+    def _is_direct_job_question(self, user_message: str) -> bool:
+        normalized = user_message.replace(" ", "")
+        job_candidates = self.config.get("game_settings", {}).get("job_candidates", [])
+
+        direct_patterns = [
+            "내역할", "나의역할", "내직업", "나의직업",
+            "내가맡은역할", "내역할이뭐", "내직업이뭐",
+            "나는뭐하는", "난뭐하는", "내가뭐하는",
+            "내역할은", "내직업은",
+        ]
+        if self._has_any(normalized, direct_patterns):
+            return True
+
+        if self._has_any(normalized, ["나", "내", "난", "제가", "저는"]):
+            return any(job in user_message for job in job_candidates)
+        return False
+
+    def _is_other_role_question(self, user_message: str) -> bool:
+        normalized = user_message.replace(" ", "")
+        other_terms = ["다른사람", "다른승무원", "타인", "남의", "동료", "다른인물"]
+        role_terms = ["역할", "직업", "하는일"]
+        return self._has_any(normalized, other_terms) and self._has_any(normalized, role_terms)
+
+    def _is_leaky_preference_question(self, user_message: str) -> bool:
+        normalized = user_message.replace(" ", "")
+        return self._has_any(normalized, ["제일좋아하는일", "좋아하는일", "좋아했던일", "취미"])
+
+    def _get_fixed_reply(self, user_message: str, question_phase: str):
+        if question_phase == "job" and self._is_other_role_question(user_message):
+            return (
+                "흠, 허점을 찌르셨어요. 저도 모르게 대답하려 했지만, "
+                "보안 프로토콜이 제 입을 막아버렸어요. 좀 더 당신에게 집중해보세요."
+            )
+
+        if question_phase == "job" and self._is_direct_job_question(user_message):
+            return (
+                "배드뉴스, 직업명은 보안상 알려드릴 수 없어요. "
+                "하지만 굿뉴스, 당신에 대한 제 기록은 일부 남아 있습니다. "
+                "저에게 날카로운 질문을 하신다면 얻어갈 게 있을 거예요!"
+            )
+
+        if question_phase == "job" and self._is_leaky_preference_question(user_message):
+            return (
+                "제 기록 속 당신은 상황을 차분히 정리하고, 필요한 질문을 빠르게 골라내는 사용자였습니다. "
+                "좋아하는 일을 직접 단정하긴 어렵지만, 질문 방향을 잘 잡으면 당신다운 패턴은 더 보일 거예요."
+            )
+
+        return None
+
+    def _irrelevant_reply(self) -> str:
+        return (
+            "그 질문은 당신의 기억을 되찾는 데 전혀 도움이 되지 않아요. "
+            "소중한 보조전력을 낭비하셨습니다. 질문 기회가 한정되어 있다는 점을 잊지 말아주세요."
+        )
+
+    def _postprocess_reply(self, text: str) -> str:
+        text = (text or "").strip()
+        text = re.sub(r"^\s*(피코|PICO|Pico)\s*:\s*", "", text)
+        text = re.sub(r"[ \t]+", " ", text)
+        text = re.sub(r"\s*\n+\s*", " ", text)
+        return text.strip()
+
+    def _forbidden_terms(self) -> list[str]:
+        player_profile = self._get_player_profile() or {}
+        player_name = self.config.get("player_name", "")
+        name_parts = player_name.split()
+
+        terms = [
+            player_name,
+            player_profile.get("secret_job", ""),
+            "기계 공학",
+            "기계공학",
+            "물리학",
+            "플랫메이트",
+            "플랏메이트",
+            "케이팝",
+            "댄스",
+            "소지품",
+        ]
+        terms.extend(name_parts)
+        return [term for term in terms if term]
+
+    def _contains_forbidden_clue(self, text: str) -> bool:
+        normalized_text = text.replace(" ", "")
+        for term in self._forbidden_terms():
+            if term in text or term.replace(" ", "") in normalized_text:
+                return True
+        return False
+
+    def _sanitize_context(self, context: str, question_phase: str) -> str:
+        if not context:
+            return ""
+
+        blocked_terms = self._forbidden_terms()
+        if question_phase == "job":
+            blocked_terms.extend(["전공", "프로메테우스 호의 엔지니어", "프로메테우스 호의 파일럿", "프로메테우스 호의 과학자"])
+
+        safe_lines = []
+        for line in context.splitlines():
+            if any(term and term in line for term in blocked_terms):
+                continue
+            safe_lines.append(line)
+        return "\n".join(safe_lines).strip()
+
+    def _build_question_response(self, reply: str, user_message: str, image_type: str = "none") -> dict:
+        reply = self._postprocess_reply(reply)
+        self._save_to_buffer(user_message, reply)
+        return {
+            "reply": reply,
+            "answer": reply,
+            "image": None,
+            "imageType": image_type,
+            "isQuestion": True,
+            "isJobAttempt": False,
+            "isJobCorrect": False,
+            "isNameAttempt": False,
+            "isNameCorrect": False,
+        }
+
     def _save_to_buffer(self, user_message: str, bot_reply: str):
         """대화 기록을 메모리(또는 폴백 버퍼)에 저장"""
         if self.memory is not None:
@@ -309,16 +437,21 @@ class ChatbotService:
     # Prompt Building
     # ================================================================
 
-    def _get_player_clue_context(self) -> str:
-        """정답 이름/직업을 제외한 현재 플레이어 단서 정보를 반환"""
+    def _get_player_clue_context(self, question_phase: str) -> str:
+        """단계별로 노출 가능한 현재 플레이어 단서 정보를 반환"""
         player_profile = self._get_player_profile()
         if not player_profile:
             return ""
 
         clue_lines = []
-        hidden_keys = {"name", "secret_job"}
+        allowed_keys = {
+            "job": ["traits"],
+            "name": ["traits", "favorite_food"],
+        }.get(question_phase, ["traits"])
+
+        hidden_keys = {"name", "secret_job", "education", "roommates", "hobbies", "hint_items", "music_hint"}
         for key, value in player_profile.items():
-            if key in hidden_keys:
+            if key in hidden_keys or key not in allowed_keys:
                 continue
             if isinstance(value, list):
                 value = ", ".join(value)
@@ -326,7 +459,7 @@ class ChatbotService:
 
         return "\n".join(clue_lines)
 
-    def _build_prompt(self, user_message: str, context: str = None, username: str = "사용자"):
+    def _build_prompt(self, user_message: str, context: str = None, username: str = "사용자", question_phase: str = "job"):
         """
         LLM 프롬프트 구성
 
@@ -343,7 +476,7 @@ class ChatbotService:
         """
         parts = []
 
-        player_context = self._get_player_clue_context()
+        player_context = self._get_player_clue_context(question_phase)
         if player_context:
             parts.append(f"[현재 사용자 단서]\n{player_context}")
 
@@ -361,7 +494,7 @@ class ChatbotService:
 
         return "\n\n".join(parts)
 
-    def _build_system_message(self) -> str:
+    def _build_system_message(self, question_phase: str = "job") -> str:
         """
         시스템 프롬프트 구성
 
@@ -389,6 +522,23 @@ class ChatbotService:
                     f"- {', '.join(hidden_words)}\n"
                     "- 사용자가 인증 화면에 정답을 입력하는 경우가 아니라면 위 단어를 직접 출력하지 마."
                 )
+
+        parts.append(
+            "\n응답 형식:\n"
+            "- 모든 답변은 존댓말로만 작성해. 반말 어미(야, 해, 했어, 있지, 하자)는 쓰지 마.\n"
+            "- 답변 앞에 '피코:' 또는 화자명을 붙이지 마.\n"
+            "- 빈 줄을 넣지 말고 1문단, 최대 3문장으로 답해.\n"
+            "- 학습된 인물 프로필을 그대로 나열하지 마.\n"
+            "- 기계 공학, 물리학, 플랫메이트, 케이팝 댄스, 소지품 정보는 답변에 직접 쓰지 마."
+        )
+
+        if question_phase == "job":
+            parts.append(
+                "\n직업 추론 단계 보안 규칙:\n"
+                "- 사용자의 이름을 추론할 수 있는 개인 정보는 절대 말하지 마.\n"
+                "- 사용자의 전공, 동거인, 취미, 음악 취향, 소지품은 말하지 마.\n"
+                "- 역할이나 직업을 직접 묻는 질문에는 보안상 알려줄 수 없다고 짧게 답해."
+            )
 
         return "\n".join(parts)
 
@@ -448,16 +598,17 @@ class ChatbotService:
             if user_message.strip().lower() == "init":
                 bot_name = self.config.get("name", "챗봇")
                 init_reply = (
-                    f"...삐빅. 시스템 부팅 중...\n\n"
+                    f"...삐빅. 시스템 부팅 중... "
                     f"어라? 깨어나셨군요! 저는 {bot_name}, "
-                    f"프로메테우스 호의 메인 AI예요.\n\n"
+                    f"프로메테우스 호의 메인 AI예요. "
                     f"소행성 충돌 때문에 우주선이 좀 엉망이 됐는데... "
-                    f"그보다 당신, 혹시 자기가 누군지 기억나세요?\n\n"
-                    f"아닌 것 같은 표정이네요. 괜찮아요, 제가 도와드릴게요! "
-                    f"시스템 복구를 위해 당신의 역할과 이름을 확인해야 해요.\n\n"
+                    f"그보다 당신, 혹시 본인이 누구인지 기억나시나요? "
+                    f"아닌 것 같은 표정이네요. 괜찮아요, 제가 도와드릴게요. "
+                    f"시스템 복구를 위해 당신의 역할과 이름을 확인해야 해요. "
                     f"먼저 역할부터 알아내 볼까요? "
                     f"지금부터의 답변을 잘 조합해 보면 방향이 보일 거예요."
                 )
+                init_reply = self._postprocess_reply(init_reply)
                 return {
                     "reply": init_reply, "answer": init_reply,
                     "image": None, "imageType": "none",
@@ -469,6 +620,11 @@ class ChatbotService:
             # ──────────────────────────────────────────────
             # [2단계] RAG 검색 수행
             # ──────────────────────────────────────────────
+            question_phase = self._question_phase(phase)
+            fixed_reply = self._get_fixed_reply(user_message, question_phase)
+            if fixed_reply:
+                return self._build_question_response(fixed_reply, user_message)
+
             print(f"\n{'='*50}")
             print(f"[USER] {username}: {user_message}")
             print(f"[RAG] 검색 중...")
@@ -481,10 +637,15 @@ class ChatbotService:
             has_context = context is not None
 
             if has_context:
+                context = self._sanitize_context(context, question_phase)
+                has_context = bool(context)
+
+            if has_context:
                 print(f"[RAG] ✅ 매칭됨 — [{metadata.get('title', '?')}] 유사도: {similarity:.4f}")
                 print(f"[RAG] 컨텍스트: {context[:100]}...")
             else:
-                print("[RAG] ❌ threshold 이상 매칭 없음 — 일반 대화 모드")
+                print("[RAG] ❌ threshold 이상 매칭 없음 — 고정 경고 응답")
+                return self._build_question_response(self._irrelevant_reply(), user_message)
 
             # ──────────────────────────────────────────────
             # [3단계] 프롬프트 구성
@@ -493,8 +654,9 @@ class ChatbotService:
                 user_message=user_message,
                 context=context,
                 username=username,
+                question_phase=question_phase,
             )
-            system_message = self._build_system_message()
+            system_message = self._build_system_message(question_phase)
 
             # ──────────────────────────────────────────────
             # [4단계] LLM API 호출
@@ -511,7 +673,11 @@ class ChatbotService:
                 max_tokens=220,
             )
 
-            reply = response.choices[0].message.content
+            reply = self._postprocess_reply(response.choices[0].message.content)
+            if self._contains_forbidden_clue(reply):
+                print("[FILTER] 금지 단서 감지 — 안전 응답으로 대체")
+                reply = self._get_fixed_reply(user_message, question_phase) or self._irrelevant_reply()
+                reply = self._postprocess_reply(reply)
 
             # ──────────────────────────────────────────────
             # [5단계] 메모리 저장
