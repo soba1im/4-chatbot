@@ -1313,8 +1313,7 @@ AI:
                 showChatRecord: false,
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/role_authentication_success_display.png",
-                playVideoBeforeNext: "hateslop/role_authentication_success.mp4",
-                chainVideo: "hateslop/intermission.mp4",
+                playVideoBeforeNext: "hateslop/intermission.mp4",
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
             },
@@ -1760,12 +1759,15 @@ AI:
 
         async function fetchAIResponse(userMessage) {
             try {
+                const requestPhase = isNameInputMode
+                    ? "name"
+                    : (isJobInputMode ? "job" : (currentPhase === "name" ? "name_question" : "job_question"));
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: userMessage,
-                        phase: isNameInputMode ? "name" : (isJobInputMode ? "job" : "question")
+                        phase: requestPhase
                     })
                 });
                 const data = await response.json();
@@ -1792,7 +1794,7 @@ AI:
         }
 
         async function handleUserInput(userMessage) {
-            if (userMessage.includes('대화 기록')) {
+            if (userMessage.includes('대화 기록') || userMessage.includes('대화기록')) {
                 const nextId = scenes[scenes.length - 1].id + 1;
                 const chatRecordScene = {
                     id: nextId,
@@ -2285,6 +2287,10 @@ AI:
             if (!message) return;
             userInputField.value = '';
             clearAutoAdvance();
+            if (!isNameInputMode && !isJobInputMode && (message.includes('대화 기록') || message.includes('대화기록'))) {
+                await handleUserInput(message);
+                return;
+            }
             if (!isNameInputMode && !isJobInputMode) {
                 if (currentBattery <= 0) return;
                 decreaseBattery();
