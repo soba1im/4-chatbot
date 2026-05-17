@@ -51,6 +51,29 @@ class RecommendedReplyTest(unittest.TestCase):
                 self.assertFalse(response["isJobAttempt"])
                 self.assertEqual(response["imageType"], "none")
 
+    def test_job_recommended_questions_accept_similar_wording(self):
+        cases = {
+            "너는 날 어떻게 기억해?": "제 기록 속 당신은 실험자이자 문제해결자에 가까웠어요.",
+            "내가 잘했던 건 뭐였어?": "문제가 생기면 우왕좌왕하기보다 원인을 잡아내는 데 강하셨어요.",
+            "내가 자주 있던 장소는 어디야?": "기록상 자주 찍히는 위치는 조종실, 실험실, 그리고 침실이에요.",
+            "내가 너한테 자주 하던 질문은?": "실험용 부품이나 설계 이야기를 자주 물으셨어요.",
+        }
+
+        for question, expected_start in cases.items():
+            with self.subTest(question=question):
+                response = self.service.generate_response(question, phase="job_question")
+
+                self.assertTrue(response["answer"].startswith(expected_start))
+                self.assertTrue(response["isQuestion"])
+
+    def test_irrelevant_questions_get_varied_replies(self):
+        replies = [
+            self.service.generate_response(message, phase="job_question")["answer"]
+            for message in ["오늘 점심 뭐야?", "날씨는 어때?", "농담 하나 해줘."]
+        ]
+
+        self.assertGreater(len(set(replies)), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
