@@ -230,29 +230,49 @@ class ChatbotService:
 
     def _get_recommended_question_reply(self, user_message: str):
         normalized = self._normalize_answer(user_message)
-        replies = {
-            self._normalize_answer("너는 나를 어떤 사용자로 기억해?"): (
+        remembered_user_reply = (
                 "제 기록 속 당신은 실험자이자 문제해결자에 가까웠어요. "
                 "뭐든지 논리적으로 분석하려고 했고, 평소엔 쾌활하고 조금 시끄러웠지만 일할 때는 놀랄 만큼 진지했죠. "
                 "자동 시스템에 덜 기대고 직접 판단하려는 고집도 아주 선명하게 남아 있습니다."
-            ),
-            self._normalize_answer("내가 특히 잘한 건 뭐야?"): (
+        )
+        strength_reply = (
                 "문제가 생기면 우왕좌왕하기보다 원인을 잡아내는 데 강하셨어요. "
                 "항로나 샘플 보관 쪽에서 일이 꼬였을 때도 좋은 아이디어를 꺼내 팀과 같이 풀어갔고, 기계공학 지식을 꽤 야무지게 써먹으셨죠. "
                 "인정합니다, 그때의 당신은 꽤 믿음직했어요."
-            ),
-            self._normalize_answer("나는 주로 어떤 공간에 있었어?"): (
+        )
+        location_reply = (
                 "기록상 자주 찍히는 위치는 조종실, 실험실, 그리고 침실이에요. "
                 "하지만 딱 잘라 한 공간에만 있었다기보다는 선체 전체를 쉴 새 없이 돌아다녔습니다. "
                 "동료들을 슬쩍슬쩍 귀찮게 하는 것도 꽤 즐기셨고요."
-            ),
-            self._normalize_answer("나는 너에게 뭘 자주 물었어?"): (
+        )
+        frequent_question_reply = (
                 "실험용 부품이나 설계 이야기를 자주 물으셨어요. "
                 "항로 계산법을 두고 저와 토론하기도 했고, 본인 설계회로에 대한 농담을 꽤 즐기셨습니다. "
                 "그런데 그 농담들을 기억 못 하신다니, 흠, 피코 데이터베이스도 살짝 서운합니다."
-            ),
+        )
+        replies = {
+            self._normalize_answer("너는 나를 어떤 사용자로 기억해?"): remembered_user_reply,
+            self._normalize_answer("내가 특히 잘한 건 뭐야?"): strength_reply,
+            self._normalize_answer("나는 주로 어떤 공간에 있었어?"): location_reply,
+            self._normalize_answer("나는 너에게 뭘 자주 물었어?"): frequent_question_reply,
         }
-        return replies.get(normalized)
+        exact_reply = replies.get(normalized)
+        if exact_reply:
+            return exact_reply
+
+        if self._has_any(normalized, ["기억", "사용자"]):
+            return remembered_user_reply
+        if self._has_any(normalized, ["잘한", "잘했던", "잘하던", "잘하는"]):
+            return strength_reply
+        if self._has_any(normalized, ["공간", "장소", "어디", "위치"]):
+            return location_reply
+        if (
+            self._has_any(normalized, ["자주물", "자주질문", "뭘물", "무엇을물"])
+            or ("자주" in normalized and self._has_any(normalized, ["질문", "물"]))
+        ):
+            return frequent_question_reply
+
+        return None
 
     def _get_fixed_reply(self, user_message: str, question_phase: str):
         recommended_reply = self._get_recommended_question_reply(user_message)
@@ -280,11 +300,23 @@ class ChatbotService:
 
         return None
 
-    def _irrelevant_reply(self) -> str:
-        return (
-            "그 질문은 당신의 기억을 되찾는 데 전혀 도움이 되지 않아요. "
-            "소중한 보조전력을 낭비하셨습니다. 질문 기회가 한정되어 있다는 점을 잊지 말아주세요."
-        )
+    def _irrelevant_reply(self, user_message: str = "") -> str:
+        replies = [
+            (
+                "그 질문은 당신의 기억을 되찾는 데 전혀 도움이 되지 않아요. "
+                "소중한 보조전력을 낭비하셨습니다. 질문 기회가 한정되어 있다는 점을 잊지 말아주세요."
+            ),
+            (
+                "흥미로운 말씀이지만 지금 필요한 단서와는 거리가 있어요. "
+                "보조전력은 넉넉하지 않으니, 당신이 어떤 사람이었는지 좁힐 질문을 골라주세요."
+            ),
+            (
+                "그쪽으로는 복구 가능한 기억 신호가 거의 잡히지 않습니다. "
+                "질문 기회가 줄어들고 있으니, 기록이나 행동 패턴을 묻는 편이 더 유리해요."
+            ),
+        ]
+        index = (len(user_message) + ord(user_message[:1] or "\0")) % len(replies)
+        return replies[index]
 
     def _postprocess_reply(self, text: str) -> str:
         text = (text or "").strip()
@@ -675,7 +707,7 @@ class ChatbotService:
                 print(f"[RAG] 컨텍스트: {context[:100]}...")
             else:
                 print("[RAG] ❌ threshold 이상 매칭 없음 — 고정 경고 응답")
-                return self._build_question_response(self._irrelevant_reply(), user_message)
+                return self._build_question_response(self._irrelevant_reply(user_message), user_message)
 
             # ──────────────────────────────────────────────
             # [3단계] 프롬프트 구성
@@ -706,7 +738,7 @@ class ChatbotService:
             reply = self._postprocess_reply(response.choices[0].message.content)
             if self._contains_forbidden_clue(reply):
                 print("[FILTER] 금지 단서 감지 — 안전 응답으로 대체")
-                reply = self._get_fixed_reply(user_message, question_phase) or self._irrelevant_reply()
+                reply = self._get_fixed_reply(user_message, question_phase) or self._irrelevant_reply(user_message)
                 reply = self._postprocess_reply(reply)
 
             # ──────────────────────────────────────────────
