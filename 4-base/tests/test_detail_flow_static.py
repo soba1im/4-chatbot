@@ -31,3 +31,60 @@ class DetailFlowStaticTest(unittest.TestCase):
         body = send_click.group("body")
         self.assertLess(body.index("isScriptedAdvanceInput()"), body.index("decreaseBattery()"))
         self.assertIn("nextSceneLogic();", body)
+
+    def test_chat_record_follow_up_waits_for_input(self):
+        follow_up_scene = re.search(
+            r"const followUpScene = \{(?P<body>.*?)\n\s*\};",
+            self.source,
+            re.DOTALL,
+        )
+
+        self.assertIsNotNone(follow_up_scene)
+        body = follow_up_scene.group("body")
+        self.assertIn('text: "다른 질문은 또 없으신가요?",', body)
+        self.assertIn("showArrow: false", body)
+
+    def test_input_overlay_does_not_block_visible_arrows(self):
+        chat_container = re.search(
+            r"\.chat-container\s*\{(?P<body>.*?)\n\s*\}",
+            self.source,
+            re.DOTALL,
+        )
+        input_wrapper = re.search(
+            r"\.custom-input-wrapper\s*\{(?P<body>.*?)\n\s*\}",
+            self.source,
+            re.DOTALL,
+        )
+        input_bg = re.search(
+            r"\.input-bg-img\s*\{(?P<body>.*?)\n\s*\}",
+            self.source,
+            re.DOTALL,
+        )
+        input_content = re.search(
+            r"\.input-content\s*\{(?P<body>.*?)\n\s*\}",
+            self.source,
+            re.DOTALL,
+        )
+        user_input = re.search(
+            r"#user-input\s*\{(?P<body>.*?)\n\s*\}",
+            self.source,
+            re.DOTALL,
+        )
+        send_button = re.search(
+            r"\.send-img-btn\s*\{(?P<body>.*?)\n\s*\}",
+            self.source,
+            re.DOTALL,
+        )
+
+        self.assertIsNotNone(chat_container)
+        self.assertIsNotNone(input_wrapper)
+        self.assertIsNotNone(input_bg)
+        self.assertIsNotNone(input_content)
+        self.assertIsNotNone(user_input)
+        self.assertIsNotNone(send_button)
+        self.assertIn("pointer-events: none;", chat_container.group("body"))
+        self.assertIn("pointer-events: none;", input_wrapper.group("body"))
+        self.assertIn("pointer-events: none;", input_bg.group("body"))
+        self.assertIn("pointer-events: none;", input_content.group("body"))
+        self.assertIn("pointer-events: auto;", user_input.group("body"))
+        self.assertIn("pointer-events: auto;", send_button.group("body"))

@@ -367,6 +367,7 @@
             left: 450px;
             width: 1050px !important;
             z-index: 100;
+            pointer-events: none;
         }
 
         .chat-container .send-btn {
@@ -428,6 +429,7 @@
             position: relative;
             width: 100%;
             max-width: 900px;
+            pointer-events: none;
         }
 
         .input-bg-img {
@@ -436,6 +438,7 @@
             object-fit: fill;
             border-radius: 8px !important;
             display: block;
+            pointer-events: none;
         }
 
         .input-content {
@@ -448,6 +451,7 @@
             align-items: center;
             padding: 0 20px;
             box-sizing: border-box;
+            pointer-events: none;
         }
 
         #user-input {
@@ -459,6 +463,7 @@
             font-family: 'Pretendard', sans-serif;
             outline: none;
             padding-left: 40px;
+            pointer-events: auto;
         }
 
         #user-input::placeholder {
@@ -470,6 +475,7 @@
             height: auto;
             cursor: pointer;
             transition: transform 0.2s, opacity 0.2s;
+            pointer-events: auto;
         }
 
         .send-img-btn:hover {
@@ -1844,6 +1850,7 @@ AI:
                     ...chatRecordScene,
                     id: nextId + 1,
                     text: "다른 질문은 또 없으신가요?",
+                    showArrow: false,
                     showPico: true,
                     instantText: false
                 };
