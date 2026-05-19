@@ -22,6 +22,15 @@
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* main-game-ui가 body(100vh flex column)를 꽉 채우고,
+           내부 game-layout이 flex:1로 나머지 높이를 차지하게 해
+           사이드바 높이를 모든 장면에서 동일하게 고정 */
+        #main-game-ui {
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
         body {
             /* 우주선 배경 이미지 */
             background-image: url("{{ url_for('static', filename='images/hateslop/corridor_bg.jpg') }}");
@@ -201,9 +210,7 @@
         .recommend-wrapper {
             position: relative;
             width: 100%;
-            overflow: hidden;
             flex-shrink: 0;
-            /* flex: 1; 삭제 (이것 때문에 장면마다 크기가 고무줄처럼 늘어났습니다!) */
         }
 
         .recommend-wrapper > img:first-child {
@@ -273,6 +280,8 @@
             justify-content: center;
             width: 100%;
             flex: 1;
+            /* 하단 고정 채팅입력창(bottom:60px + height:81px = 141px)에 가려지지 않도록 여백 확보 */
+            padding-bottom: 160px;
         }
 
         .briefing-layout {
@@ -282,6 +291,8 @@
             justify-content: center;
             gap: 30px;
             width: 100%;
+            flex: 1;
+            padding-bottom: 123px;
             transform: translateY(20px) translateX(0px);
         }
 
@@ -334,6 +345,15 @@
         #briefing-next-btn {
             cursor: pointer;
             transition: filter 0.2s; /* 부드러운 효과 */
+        }
+
+        /* 모든 화살표를 chat-container 기준 동일 위치에 고정 */
+        .chat-container .next-arrow {
+            position: absolute;
+            top: -55px;
+            right: 160px;
+            margin-top: 0;
+            flex-shrink: unset;
         }
 
         .briefing-text {
@@ -488,6 +508,7 @@
             height: auto;
             object-fit: contain;
             border-radius: 8px;
+            transform: translateY(-60px);
         }
 
         .mission-file-image {
@@ -904,14 +925,11 @@
 
                 <div id="standard-chat-area" class="chat-text-container">
                     <div id="chat-history" class="chat-history-text"></div>
-                    <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="next-arrow-btn" class="next-arrow" alt="다음 대사">
                 </div>
 
                 <div id="briefing-area" class="briefing-wrapper" style="display: none;">
                     <img src="{{ url_for('static', filename='images/hateslop/briefing.png') }}" class="briefing-image" alt="상황 브리핑">
-                    <div class="briefing-arrow-area">
-                        <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="briefing-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
-                    </div>
+                    <div class="briefing-arrow-area"></div>
                 </div>
 
                 <div id="auth-panel" class="auth-panel-container" style="display: none;">
@@ -920,31 +938,30 @@
 
                 <div id="mission-file-area" class="briefing-wrapper" style="display: none;">
                     <img src="{{ url_for('static', filename='images/hateslop/mission_file.png') }}" class="mission-file-image" alt="미션 파일">
-                    <div class="briefing-arrow-area">
-                        <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="mission-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
-                    </div>
+                    <div class="briefing-arrow-area"></div>
                 </div>
 
                 <div id="chat-record-area" class="briefing-wrapper" style="display: none;">
                     <img src="" id="chat-record-img" class="chat-record-image" alt="대화 기록">
-                    <div class="briefing-arrow-area">
-                        <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="record-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
-                    </div>
+                    <div class="briefing-arrow-area"></div>
                 </div>
 
                 <div id="role-auth-area" class="auth-panel-container" style="display: none; flex-direction: column; align-items: center;">
                     <img src="{{ url_for('static', filename='images/hateslop/security_display.png') }}" id="role-auth-img" class="auth-image" alt="역할 인증">
-                    <div class="briefing-arrow-area">
-                        <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="role-auth-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
-                    </div>
+                    <div class="briefing-arrow-area"></div>
                 </div>
 
             </div>
         </div>
 
         <div class="chat-container">
+            <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="next-arrow-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
+            <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="briefing-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
+            <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="mission-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
+            <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="record-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
+            <img src="{{ url_for('static', filename='images/hateslop/chat_skip_button.png') }}" id="role-auth-next-btn" class="next-arrow" alt="다음 대사" style="visibility: hidden;">
             <div class="custom-input-wrapper">
-                <img src="{{ url_for('static', filename='images/hateslop/basic_input.png') }}" class="input-bg-img" id="dynamic-input-bg" alt="입력창 배경">
+                <img src="{{ url_for('static', filename='images/hateslop/user_input.png') }}" class="input-bg-img" id="dynamic-input-bg" alt="입력창 배경">
                 <div class="input-content">
                     <input type="text" id="user-input" autocomplete="off">
                     <img src="{{ url_for('static', filename='images/hateslop/user_input_button.png') }}" id="send-btn" class="send-img-btn" alt="전송">
@@ -1013,7 +1030,7 @@ AI:
                 showHologram: false,
                 showRecommendText: false,
                 isBriefing: false, // 일반 대화 모드
-                inputBgImage: "images/hateslop/basic_input.png"
+                inputBgImage: "images/hateslop/user_input.png"
             },
             {
                 id: 1,
@@ -1023,7 +1040,7 @@ AI:
                 showHologram: false,
                 showRecommendText: false,
                 isBriefing: false,
-                inputBgImage: "images/hateslop/basic_input.png"
+                inputBgImage: "images/hateslop/user_input.png"
             },
             {
                 id: 2,
@@ -1350,8 +1367,8 @@ AI:
             {
                 id: 26,
                 text: "",
-                showArrow: false, // 이름을 입력해야 하므로 다음 버튼은 잠시 숨깁니다
-                showPico: false,  // 디스플레이에 집중하기 위해 피코는 숨깁니다
+                showArrow: true,
+                showPico: false,
                 showHologram: false,
                 isBriefing: false,
                 showRecommendText: true,
@@ -1360,6 +1377,7 @@ AI:
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/name_input_display.png",
                 autoAdvanceSec: 5,
+                disableInput: true,
                 sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png", 
                 powerBgImage: "images/hateslop/cockpit_left_electric.png", 
                 recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
@@ -2315,6 +2333,10 @@ AI:
                 if (currentBattery <= 0) return;
                 decreaseBattery();
             }
+            if (!isNameInputMode && !isJobInputMode && (message.includes('대화 기록') || message.includes('대화기록'))) {
+                await handleUserInput(message);
+                return;
+            }
             await handleUserInput(message);
         }
         
@@ -2341,6 +2363,7 @@ AI:
             const scene = scenes[index];
             isJobInputMode = scene.isJobInputScene === true;
             isNameInputMode = scene.isNameInputScene === true;
+            userInputField.disabled = scene.disableInput === true;
 
             const picoImageElement = document.getElementById("pico-avatar");
 
@@ -2606,7 +2629,7 @@ AI:
                 } else {
                     // 모든 영상이 끝나면 영상 레이어 숨기고 게임 시작
                     videoOverlay.style.display = 'none';
-                    mainGameUI.style.display = 'block';
+                    mainGameUI.style.display = 'flex';
                     renderScene(0);
                 }
             };
@@ -2688,7 +2711,7 @@ AI:
 
         function closeClueNote() {
             document.getElementById('clue-note-overlay').style.display = 'none';
-            mainGameUI.style.display = 'block';
+            mainGameUI.style.display = 'flex';
         }
 
         const btnClue = document.getElementById('btn-clue');
@@ -2766,7 +2789,10 @@ AI:
                     startScreen.style.opacity = '0';
                     setTimeout(() => {
                         startScreen.style.display = 'none';
-
+                        // [DEBUG] 인트로 텍스트 & 오프닝 영상 스킵 — 테스트 완료 후 아래 주석 해제하고 이 두 줄 제거
+                        mainGameUI.style.display = 'flex';
+                        renderScene(25); // 이름 추론 단계 시작 (원래: 0)
+                        /* 원본 흐름 (복구 시 위 두 줄 지우고 아래 주석 해제)
                         showIntroTyping("당신은 우주 한가운데에 있습니다.", 2000, () => {
                         showIntroTyping("그러나 기억이 아무것도 나지 않습니다.\n이름도, 이곳에 온 이유도,\n함께 있던 사람들의 얼굴도 떠오르지 않습니다.", 2500, () => {
                         showIntroTyping("다만 한 가지는 분명합니다.", 2000, () => {
@@ -2779,13 +2805,14 @@ AI:
                             endingVideo.onended = () => {
                                 videoOverlay.style.display = 'none';
                                 document.getElementById('intro-overlay').style.display = 'none';
-                                mainGameUI.style.display = 'block';
+                                mainGameUI.style.display = 'flex';
                                 renderScene(0);
                             };
                         });
                         });
                         });
                         });
+                        */
                     }, 600);
                 });
             }
