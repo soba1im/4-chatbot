@@ -66,6 +66,49 @@ class RecommendedReplyTest(unittest.TestCase):
                 self.assertTrue(response["answer"].startswith(expected_start))
                 self.assertTrue(response["isQuestion"])
 
+    def test_name_recommended_questions_return_pico_fixed_replies(self):
+        cases = {
+            "내 인간관계는 어땠지?": (
+                "사람들과 두루 잘 지내셨고, 문제가 생겨도 말부터 꼬이기보다 차분히 풀어내는 쪽에 가까웠어요. "
+                "이상하게 사람들을 끌어당기는 매력도 있어서 주변 기록에 당신 이름이 자주 보입니다. "
+                "침착한 얼굴로 판을 정리하는 모습, 피코 로그에도 꽤 선명하게 남아 있어요."
+            ),
+            "내 평소 습관을 알려줘.": (
+                "기록하는 걸 정말 좋아하셨어요. "
+                "거창한 보고서든 사소한 하루 조각이든, 늘 당신만의 방식으로 남겨두는 습관이 있었습니다. "
+                "기억은 날아갔어도 기록 본능은 쉽게 안 지워지는 법이죠, 삐빅."
+            ),
+            "내 취미는 어땠지?": (
+                "정확하게 알려드릴 수 없는 질문이군요. "
+                "보안 프로토콜이 취미 칸을 살짝 가리고 있어서요. "
+                "다만 이것만은 말할 수 있어요, 당신은 분명 예술적인 면모가 있는 사람이었습니다."
+            ),
+        }
+
+        for question, expected in cases.items():
+            with self.subTest(question=question):
+                response = self.service.generate_response(question, phase="name_question")
+
+                self.assertEqual(response["answer"], expected)
+                self.assertEqual(response["reply"], expected)
+                self.assertTrue(response["isQuestion"])
+                self.assertFalse(response["isNameAttempt"])
+                self.assertEqual(response["imageType"], "none")
+
+    def test_name_recommended_questions_accept_similar_wording(self):
+        cases = {
+            "나는 사람들과 관계가 어땠어?": "사람들과 두루 잘 지내셨고",
+            "내 기록 습관은 어땠어?": "기록하는 걸 정말 좋아하셨어요.",
+            "취미 같은 건 뭐였어?": "정확하게 알려드릴 수 없는 질문이군요.",
+        }
+
+        for question, expected_start in cases.items():
+            with self.subTest(question=question):
+                response = self.service.generate_response(question, phase="name_question")
+
+                self.assertTrue(response["answer"].startswith(expected_start))
+                self.assertTrue(response["isQuestion"])
+
     def test_irrelevant_questions_get_varied_replies(self):
         replies = [
             self.service.generate_response(message, phase="job_question")["answer"]

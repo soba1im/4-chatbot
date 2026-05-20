@@ -274,8 +274,46 @@ class ChatbotService:
 
         return None
 
+    def _get_name_recommended_question_reply(self, user_message: str):
+        normalized = self._normalize_answer(user_message)
+        relationship_reply = (
+                "사람들과 두루 잘 지내셨고, 문제가 생겨도 말부터 꼬이기보다 차분히 풀어내는 쪽에 가까웠어요. "
+                "이상하게 사람들을 끌어당기는 매력도 있어서 주변 기록에 당신 이름이 자주 보입니다. "
+                "침착한 얼굴로 판을 정리하는 모습, 피코 로그에도 꽤 선명하게 남아 있어요."
+        )
+        habit_reply = (
+                "기록하는 걸 정말 좋아하셨어요. "
+                "거창한 보고서든 사소한 하루 조각이든, 늘 당신만의 방식으로 남겨두는 습관이 있었습니다. "
+                "기억은 날아갔어도 기록 본능은 쉽게 안 지워지는 법이죠, 삐빅."
+        )
+        hobby_reply = (
+                "정확하게 알려드릴 수 없는 질문이군요. "
+                "보안 프로토콜이 취미 칸을 살짝 가리고 있어서요. "
+                "다만 이것만은 말할 수 있어요, 당신은 분명 예술적인 면모가 있는 사람이었습니다."
+        )
+        replies = {
+            self._normalize_answer("내 인간관계는 어땠지?"): relationship_reply,
+            self._normalize_answer("내 평소 습관을 알려줘."): habit_reply,
+            self._normalize_answer("내 취미는 어땠지?"): hobby_reply,
+        }
+        exact_reply = replies.get(normalized)
+        if exact_reply:
+            return exact_reply
+
+        if self._has_any(normalized, ["인간관계", "사람들과", "관계"]):
+            return relationship_reply
+        if self._has_any(normalized, ["평소습관", "습관", "기록"]):
+            return habit_reply
+        if self._has_any(normalized, ["취미"]):
+            return hobby_reply
+
+        return None
+
     def _get_fixed_reply(self, user_message: str, question_phase: str):
-        recommended_reply = self._get_recommended_question_reply(user_message)
+        if question_phase == "name":
+            recommended_reply = self._get_name_recommended_question_reply(user_message)
+        else:
+            recommended_reply = self._get_recommended_question_reply(user_message)
         if recommended_reply:
             return recommended_reply
 
