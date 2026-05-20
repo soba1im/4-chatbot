@@ -1225,7 +1225,7 @@ AI:
             {
                 id: 17, 
                 text: "",
-                showArrow: false,
+                showArrow: true,
                 showPico: false,
                 showHologram: false,
                 isBriefing: false,
@@ -1234,8 +1234,6 @@ AI:
                 showChatRecord: false,
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/role_authentication_1st_fail.png", 
-                autoAdvanceSec: 5,
-                disableInput: true,
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg" 
             },
@@ -1285,7 +1283,7 @@ AI:
             {
                 id: 21,
                 text: "이제 다시 한 번 역할을 입력해보세요.",
-                showArrow: true,
+                showArrow: false,
                 showPico: true,
                 showHologram: false,
                 isBriefing: false,
@@ -1293,22 +1291,6 @@ AI:
                 showMissionFile: false,
                 showChatRecord: false, // 대화 기록 창 끄기
                 showRoleAuth: false,   // 역할 인증 창 끄기
-                isJobInputScene: false,
-                inputBgImage: "images/hateslop/door_input.png",
-                bgImage: "images/hateslop/door_bg.jpg"
-            },
-            {
-                id: 21.5,
-                text: "",
-                showArrow: false,
-                showPico: false,
-                showHologram: false,
-                isBriefing: false,
-                showRecommendText: true,
-                showMissionFile: false,
-                showChatRecord: false,
-                showRoleAuth: true,
-                roleAuthImage: "images/hateslop/role_input_display.png",
                 isJobInputScene: true,
                 inputBgImage: "images/hateslop/door_input.png",
                 bgImage: "images/hateslop/door_bg.jpg"
@@ -1395,7 +1377,7 @@ AI:
                 showChatRecord: false,
                 showRoleAuth: true,
                 roleAuthImage: "images/hateslop/name_input_display.png",
-                autoAdvanceSec: 8,
+                autoAdvanceSec: 5,
                 disableInput: true,
                 sidebarMainBgImage: "images/hateslop/cockpit_box_bg.png", 
                 powerBgImage: "images/hateslop/cockpit_left_electric.png", 
@@ -1641,7 +1623,6 @@ AI:
                 ]
             }
         ];
-        const initialSceneCount = scenes.length;
 
         const sendBtn = document.getElementById('send-btn');
 
@@ -1704,13 +1685,6 @@ AI:
             }
         }
 
-        function resetBatteryIcons() {
-            for (let i = 1; i <= 5; i++) {
-                const bat = document.getElementById(`bat-${i}`);
-                if (bat) bat.style.opacity = '1';
-            }
-        }
-
         function clearAutoAdvance() {
             if (autoAdvanceTimer) {
                 clearTimeout(autoAdvanceTimer);
@@ -1739,10 +1713,10 @@ AI:
             if (currentScene.playVideoBeforeNext) {
                 videoOverlay.style.display = 'block';
                 endingVideo.src = `/static/videos/${currentScene.playVideoBeforeNext}`;
+                endingVideo.play();
                 endingVideo.onended = () => {
                     if (currentScene.chainVideo) {
                         endingVideo.src = `/static/videos/${currentScene.chainVideo}`;
-                        endingVideo.load();
                         endingVideo.play();
                         endingVideo.onended = () => {
                             videoOverlay.style.display = 'none';
@@ -1754,8 +1728,6 @@ AI:
                         renderScene(currentSceneIndex);
                     }
                 };
-                endingVideo.load();
-                endingVideo.play();
                 return;
             }
 
@@ -1964,7 +1936,7 @@ AI:
                         const failScene = {
                             id: nextId,
                             text: "",
-                            showArrow: false,
+                            showArrow: true,
                             showPico: false,
                             showHologram: false,
                             isBriefing: false,
@@ -1978,8 +1950,6 @@ AI:
                             powerBgImage: "images/hateslop/cockpit_left_electric.png",
                             recommendBgImage: "images/hateslop/cockpit_recommended_qs.png",
                             bgImage: "images/hateslop/cockpit_bg.jpg",
-                            autoAdvanceSec: 5,
-                            disableInput: true,
                             recommendQuestions: [] 
                         };
                         
@@ -2179,8 +2149,7 @@ AI:
                 isJobInputScene: wasInJobMode,
                 text: answerText,
                 showArrow: false,
-                autoAdvanceSec: (currentPhase === "job" && isQuestion && currentBattery === 0) ? 10
-                    : ((currentPhase === "name" && isQuestion && (questionCount === 3 || questionCount === 5)) ? 2 : undefined),
+                autoAdvanceSec: (currentPhase === "name" && isQuestion && (questionCount === 3 || questionCount === 5)) ? 2 : undefined,
                 showPico: !isImageMode,
                 showHologram: false,
                 isBriefing: false,
@@ -2188,7 +2157,6 @@ AI:
                 showMissionFile: false,
                 showChatRecord: false,
                 showRoleAuth: isImageMode,
-                disableInput: currentPhase === "job" && isQuestion && currentBattery === 0,
                 roleAuthImage: isImageMode ? imagePath : "",
                 returnSceneIndex: isImageMode ? currentSceneIndex : undefined,
                 bgImage: currentPhase === "name" ? "images/hateslop/cockpit_bg.jpg" : scenes[currentSceneIndex].bgImage,
@@ -2212,62 +2180,17 @@ AI:
             };
 
             const fromIdx5 = currentSceneIndex;
+            scenes.push(newScene);
+            dissolveToScene(fromIdx5, scenes.length - 1);
+
             if (currentPhase === "job" && currentBattery === 0) {
-                const jobExhaustScene1 = {
-                    id: nextId + 1,
-                    text: "질문을 위해 할당되었던 전력이 모두 소모되었어요. 이제는 정말 기억을 되찾아야하는 시간이에요.",
-                    showArrow: true,
-                    showPico: true,
-                    showHologram: false,
-                    isBriefing: false,
-                    showRecommendText: true,
-                    showMissionFile: false,
-                    showChatRecord: false,
-                    showRoleAuth: false,
-                    inputBgImage: "images/hateslop/door_input.png",
-                    bgImage: "images/hateslop/door_bg.jpg",
-                    recommendQuestions: newScene.recommendQuestions
-                };
-
-                const jobExhaustScene2 = {
-                    id: nextId + 2,
-                    text: "이제 시동을 걸러 가볼까요?",
-                    showArrow: true,
-                    showPico: true,
-                    showHologram: false,
-                    isBriefing: false,
-                    showRecommendText: true,
-                    showMissionFile: false,
-                    showChatRecord: false,
-                    showRoleAuth: false,
-                    inputBgImage: "images/hateslop/door_input.png",
-                    bgImage: "images/hateslop/door_bg.jpg",
-                    recommendQuestions: newScene.recommendQuestions
-                };
-
-                const jobInputScene = {
-                    id: nextId + 3,
-                    text: "",
-                    showArrow: false,
-                    showPico: false,
-                    showHologram: false,
-                    isBriefing: false,
-                    showRecommendText: true,
-                    showMissionFile: false,
-                    showChatRecord: false,
-                    showRoleAuth: true,
-                    roleAuthImage: "images/hateslop/role_input_display.png",
-                    isJobInputScene: true,
-                    inputBgImage: "images/hateslop/door_input.png",
-                    bgImage: "images/hateslop/door_bg.jpg",
-                    recommendQuestions: []
-                };
-
-                scenes.push(newScene, jobExhaustScene1, jobExhaustScene2, jobInputScene);
-            } else {
-                scenes.push(newScene);
+                const scene15Idx = scenes.findIndex(s => s.id === 15);
+                if (scene15Idx !== -1) {
+                    autoAdvanceTimer = setTimeout(() => {
+                        dissolveToScene(scenes.length - 1, scene15Idx);
+                    }, 2000);
+                }
             }
-            dissolveToScene(fromIdx5, scenes.length - (currentPhase === "job" && currentBattery === 0 ? 4 : 1));
 
             if (currentPhase === "name" && questionCount === 3 && isQuestion) {
                 const hintScene1 = {
@@ -2292,7 +2215,7 @@ AI:
                 const hintScene2 = {
                     id: nextId + 2,
                     text: "어때요? 조금 도움이 되죠! 이 흐름을 타서 빨리 다음 질문을 던져보세요!",
-                    showArrow: false,
+                    showArrow: true,
                     showPico: false,
                     showAlbumHint: true,
                     showHologram: false,
@@ -2473,11 +2396,6 @@ AI:
                 document.body.style.backgroundSize = 'cover';
                 document.body.style.backgroundPosition = 'center';
                 if (scene.bgImage.includes('cockpit_bg')) {
-                    if (!namePhaseUnlocked) {
-                        questionCount = 0;
-                        currentBattery = 5;
-                        resetBatteryIcons();
-                    }
                     namePhaseUnlocked = true;
                     currentPhase = "name";
                 }
@@ -2861,8 +2779,11 @@ AI:
                     isJobInputMode = false;
                     isNameInputMode = false;
                     clearAutoAdvance();
-                    scenes.length = initialSceneCount;
-                    resetBatteryIcons();
+                    scenes.length = 36;
+                    for (let i = 1; i <= 5; i++) {
+                        const bat = document.getElementById(`bat-${i}`);
+                        if (bat) bat.style.opacity = '1';
+                    }
 
                     const startScreen = document.getElementById('start-screen');
                     startScreen.style.transition = 'opacity 0.6s';
