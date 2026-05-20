@@ -354,6 +354,7 @@
             right: 160px;
             margin-top: 0;
             flex-shrink: unset;
+            pointer-events: auto;
         }
 
         .briefing-text {
@@ -2789,10 +2790,6 @@ AI:
                     startScreen.style.opacity = '0';
                     setTimeout(() => {
                         startScreen.style.display = 'none';
-                        // [DEBUG] 인트로 텍스트 & 오프닝 영상 스킵 — 테스트 완료 후 아래 주석 해제하고 이 두 줄 제거
-                        mainGameUI.style.display = 'flex';
-                        renderScene(25); // 이름 추론 단계 시작 (원래: 0)
-                        /* 원본 흐름 (복구 시 위 두 줄 지우고 아래 주석 해제)
                         showIntroTyping("당신은 우주 한가운데에 있습니다.", 2000, () => {
                         showIntroTyping("그러나 기억이 아무것도 나지 않습니다.\n이름도, 이곳에 온 이유도,\n함께 있던 사람들의 얼굴도 떠오르지 않습니다.", 2500, () => {
                         showIntroTyping("다만 한 가지는 분명합니다.", 2000, () => {
@@ -2812,7 +2809,6 @@ AI:
                         });
                         });
                         });
-                        */
                     }, 600);
                 });
             }
