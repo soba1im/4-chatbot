@@ -713,6 +713,73 @@
             color: white;
             border-color: white;
         }
+
+        /* 영상 skip 버튼 */
+        #skip-btn {
+            display: none;
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'DungGeunMo', sans-serif;
+            font-size: 0.95rem;
+            padding: 10px 22px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            z-index: 10001;
+        }
+        #skip-btn:hover { background: rgba(255,255,255,0.22); color: white; }
+
+        /* 엔딩 후 버튼 overlay */
+        #ending-overlay {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            z-index: 10001;
+        }
+        #ending-action-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            font-family: 'DungGeunMo', sans-serif;
+            font-size: 1.1rem;
+            padding: 14px 36px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            letter-spacing: 0.05em;
+        }
+        #ending-action-btn:hover { background: rgba(255,255,255,0.25); }
+
+        /* X 나가기 버튼 */
+        #exit-btn {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 99990;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 1.1rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+        #exit-btn:hover { background: rgba(180,0,0,0.5); color: white; border-color: rgba(255,255,255,0.7); }
     </style>
 </head>
 <body>
@@ -725,6 +792,7 @@
 
     <div id="intro-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:99997; justify-content:center; align-items:center;">
         <p id="intro-overlay-text" style="color:white; font-size:1.5rem; font-family:'DungGeunMo', sans-serif; text-align:center; line-height:2; white-space:pre-wrap; max-width:700px; padding:0 40px;"></p>
+        <button id="intro-skip-btn" style="position:absolute; bottom:40px; right:40px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.45); color:rgba(255,255,255,0.85); font-family:'DungGeunMo',sans-serif; font-size:0.95rem; padding:10px 22px; cursor:pointer; border-radius:4px;">SKIP ›</button>
     </div>
 
     <!-- [피코 대화 시작] -->
@@ -828,10 +896,15 @@
 
     <div id="video-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 9999;">
         <video id="ending-video" style="width: 100%; height: 100%; object-fit: cover;">
-            <!-- src는 자바스크립트가 자동으로 넣어줄 것이므로 비워둡니다 -->
             <source src="" type="video/mp4">
         </video>
-    </div> <!-- 비디오 -->
+        <button id="skip-btn">SKIP ›</button>
+        <div id="ending-overlay">
+            <button id="ending-action-btn">처음으로</button>
+        </div>
+    </div>
+
+    <button id="exit-btn" title="처음으로">✕</button>
 
     <!-- 단서 노트 전체 화면 -->
     <div id="clue-note-overlay" style="display: none;">
@@ -1538,6 +1611,10 @@ AI:
         const chatRecordImg = document.getElementById('chat-record-img');
         const videoOverlay = document.getElementById('video-overlay');
         const endingVideo = document.getElementById('ending-video');
+        const skipBtn = document.getElementById('skip-btn');
+        const endingOverlay = document.getElementById('ending-overlay');
+        const endingActionBtn = document.getElementById('ending-action-btn');
+        const exitBtn = document.getElementById('exit-btn');
         const powerBgImg = document.querySelector('.power-wrapper img');
         const recommendBgImg = document.querySelector('#recommend-list img');
         const sidebarMainBg = document.querySelector('.sidebar-panel-img .bg-layer');
@@ -1550,9 +1627,9 @@ AI:
             
         function decreaseBattery() {
             if (currentBattery > 0) {
-                const targetBat = document.getElementById(`bat-${currentBattery}`);
+                const targetBat = document.getElementById(`bat-${6 - currentBattery}`);
                 if (targetBat) {
-                    targetBat.style.opacity = '0.2'; 
+                    targetBat.style.opacity = '0.2';
                 }
                 currentBattery--;
             }
@@ -1564,6 +1641,36 @@ AI:
                 if (bat) bat.style.opacity = '1';
             }
         }
+
+        function resetGame() {
+            if (_introTypingIv) { clearInterval(_introTypingIv); _introTypingIv = null; }
+            if (_introT1) { clearTimeout(_introT1); _introT1 = null; }
+            if (_introT2) { clearTimeout(_introT2); _introT2 = null; }
+            introSkipFn = null;
+            endingVideo.pause();
+            endingVideo.src = '';
+            videoOverlay.style.display = 'none';
+            endingOverlay.style.display = 'none';
+            skipBtn.style.display = 'none';
+            exitBtn.style.display = 'none';
+            mainGameUI.style.display = 'none';
+            document.getElementById('intro-overlay').style.display = 'none';
+            currentBattery = 5;
+            resetBatteryIcons();
+            const startScreen = document.getElementById('start-screen');
+            startScreen.style.opacity = '1';
+            startScreen.style.transition = 'none';
+            startScreen.style.display = 'flex';
+        }
+
+        exitBtn.addEventListener('click', resetGame);
+
+        document.getElementById('intro-skip-btn').addEventListener('click', () => {
+            if (_introTypingIv) { clearInterval(_introTypingIv); _introTypingIv = null; }
+            if (_introT1) { clearTimeout(_introT1); _introT1 = null; }
+            if (_introT2) { clearTimeout(_introT2); _introT2 = null; }
+            if (introSkipFn) { introSkipFn(); introSkipFn = null; }
+        });
 
         function clearAutoAdvance() {
             if (autoAdvanceTimer) {
@@ -1614,29 +1721,27 @@ AI:
             }
 
             if (currentScene.triggerEnding) {
+                exitBtn.style.display = 'none';
                 videoOverlay.style.display = 'block';
                 endingVideo.src = '/static/videos/hateslop/happyending.mp4';
                 endingVideo.play();
                 endingVideo.onended = () => {
-                    videoOverlay.addEventListener('click', () => {
-                        videoOverlay.style.display = 'none';
-                        mainGameUI.style.display = 'none';
-                        document.getElementById('start-screen').style.display = 'flex';
-                    }, { once: true });
+                    endingActionBtn.textContent = '처음으로';
+                    endingOverlay.style.display = 'flex';
+                    endingActionBtn.onclick = resetGame;
                 };
                 return;
             }
 
             if (currentScene.triggerFailEnding) {
+                exitBtn.style.display = 'none';
                 videoOverlay.style.display = 'block';
                 endingVideo.src = '/static/videos/hateslop/badending.mp4';
                 endingVideo.play();
                 endingVideo.onended = () => {
-                    videoOverlay.addEventListener('click', () => {
-                        videoOverlay.style.display = 'none';
-                        mainGameUI.style.display = 'none';
-                        document.getElementById('start-screen').style.display = 'flex';
-                    }, { once: true });
+                    endingActionBtn.textContent = 'RESTART';
+                    endingOverlay.style.display = 'flex';
+                    endingActionBtn.onclick = resetGame;
                 };
                 return;
             }
@@ -2033,7 +2138,7 @@ AI:
                 isJobInputScene: wasInJobMode,
                 text: answerText,
                 showArrow: false,
-                autoAdvanceSec: (currentPhase === "job" && isQuestion && currentBattery === 0) ? 10
+                autoAdvanceSec: (currentPhase === "job" && isQuestion && currentBattery === 0) ? 2
                     : ((currentPhase === "name" && isQuestion && (questionCount === 3 || questionCount === 5)) ? 2 : undefined),
                 showPico: !isImageMode,
                 showHologram: false,
@@ -2672,25 +2777,33 @@ AI:
             });
         }
 
+        let _introTypingIv = null;
+        let _introT1 = null;
+        let _introT2 = null;
+        let introSkipFn = null;
+
         function showIntroTyping(text, holdMs, onDone) {
             const introOverlay = document.getElementById('intro-overlay');
             const introText = document.getElementById('intro-overlay-text');
-            // 오버레이(검정 배경)는 항상 유지, 텍스트만 페이드
             introOverlay.style.display = 'flex';
             introOverlay.style.opacity = '1';
             introText.style.transition = '';
             introText.style.opacity = '1';
             introText.textContent = '';
             let i = 0;
-            const iv = setInterval(() => {
+            if (_introTypingIv) clearInterval(_introTypingIv);
+            if (_introT1) clearTimeout(_introT1);
+            if (_introT2) clearTimeout(_introT2);
+            _introTypingIv = setInterval(() => {
                 if (i < text.length) {
                     introText.textContent += text[i++];
                 } else {
-                    clearInterval(iv);
-                    setTimeout(() => {
+                    clearInterval(_introTypingIv);
+                    _introTypingIv = null;
+                    _introT1 = setTimeout(() => {
                         introText.style.transition = 'opacity 0.5s';
                         introText.style.opacity = '0';
-                        setTimeout(onDone, 500);
+                        _introT2 = setTimeout(onDone, 500);
                     }, holdMs);
                 }
             }, 80);
@@ -2723,22 +2836,30 @@ AI:
                     startScreen.style.opacity = '0';
                     setTimeout(() => {
                         startScreen.style.display = 'none';
-                        showIntroTyping("당신은 우주 한가운데에 있습니다.", 2000, () => {
-                        showIntroTyping("그러나 기억이 아무것도 나지 않습니다.\n이름도, 이곳에 온 이유도,\n함께 있던 사람들의 얼굴도 떠오르지 않습니다.", 2500, () => {
-                        showIntroTyping("다만 한 가지는 분명합니다.", 2000, () => {
-                        showIntroTyping("집으로 돌아가야 합니다.\n그 집조차 기억이 나지 않지만요.", 2500, () => {
-
+                        const launchOpeningVideo = () => {
+                            if (_introTypingIv) { clearInterval(_introTypingIv); _introTypingIv = null; }
+                            introSkipFn = null;
                             document.getElementById('intro-overlay').style.display = 'none';
                             videoOverlay.style.display = 'block';
                             endingVideo.src = '/static/videos/hateslop/opening.mp4';
                             endingVideo.play();
-                            endingVideo.onended = () => {
+                            skipBtn.style.display = 'block';
+                            exitBtn.style.display = 'flex';
+                            const finishOpening = () => {
+                                skipBtn.style.display = 'none';
                                 videoOverlay.style.display = 'none';
-                                document.getElementById('intro-overlay').style.display = 'none';
                                 mainGameUI.style.display = 'flex';
                                 renderScene(0);
                             };
-                        });
+                            skipBtn.onclick = () => { endingVideo.pause(); finishOpening(); };
+                            endingVideo.onended = finishOpening;
+                        };
+                        introSkipFn = launchOpeningVideo;
+
+                        showIntroTyping("당신은 우주 한가운데에 있습니다.", 2000, () => {
+                        showIntroTyping("그러나 기억이 아무것도 나지 않습니다.\n이름도, 이곳에 온 이유도,\n함께 있던 사람들의 얼굴도 떠오르지 않습니다.", 2500, () => {
+                        showIntroTyping("다만 한 가지는 분명합니다.", 2000, () => {
+                        showIntroTyping("집으로 돌아가야 합니다.\n그 집조차 기억이 나지 않지만요.", 2500, launchOpeningVideo);
                         });
                         });
                         });
